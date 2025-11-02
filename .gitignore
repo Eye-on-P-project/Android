@@ -1,0 +1,162 @@
+# ============================================
+# Android 프로젝트 .gitignore
+# ============================================
+
+# ============================================
+# 빌드 결과물 (Build Outputs)
+# ============================================
+# 빌드 후 생성되는 파일들 - 컴파일된 코드, APK, AAB 등
+# 각자 환경에서 빌드하므로 커밋 불필요
+/build
+/app/build
+/*/build
+
+# ============================================
+# Gradle 관련 파일들
+# ============================================
+# Gradle 캐시 및 빌드 결과물
+# 각자 로컬에서 생성되므로 커밋 불필요 (버전 충돌 방지)
+.gradle
+/.gradle
+gradle-app.setting
+# gradle-wrapper.jar와 gradle-wrapper.properties는 커밋해야 함 (팀원 모두 같은 Gradle 버전 사용)
+# 예외 처리는 아래 *.jar 패턴 다음에 있음
+
+# ============================================
+# 로컬 설정 파일 (Local Configuration)
+# ============================================
+# Android SDK 경로 등 개인 로컬 환경 설정
+# 각자 SDK 설치 경로가 다르므로 커밋하면 안 됨 (Windows/Mac 경로 차이)
+local.properties
+*.properties
+# 예외: gradle.properties와 gradle-wrapper.properties는 커밋해야 함 (팀 설정 공유)
+!gradle.properties
+!gradle-wrapper.properties
+
+# ============================================
+# IDE 설정 파일 (IDE Settings)
+# ============================================
+# Android Studio 자동 생성 파일들 - IDE 버전마다 다르므로 커밋 시 충돌 발생
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+# 단, 공유해야 하는 설정은 .idea 디렉토리 내에서 선택적으로 커밋 가능
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+
+# ============================================
+# 운영체제별 파일 (OS-specific Files)
+# ============================================
+# macOS 파일 탐색기 메타데이터 - Mac 환경에서 자동 생성
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Windows 파일 탐색기 메타데이터 - Windows 환경에서 자동 생성
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux 임시 파일
+*~
+
+# ============================================
+# 로그 및 임시 파일 (Logs & Temp Files)
+# ============================================
+# 빌드 로그 및 임시 파일들
+*.log
+*.tmp
+*.bak
+*.swp
+*~.nib
+.cxx/
+.externalNativeBuild/
+.cxx/
+
+# ============================================
+# 캡처 및 디버그 파일 (Captures & Debug)
+# ============================================
+# 안드로이드 스튜디오에서 캡처한 스크린샷 등
+/captures
+*.ap_
+*.apk
+*.aab
+
+# ============================================
+# 서명 파일 (Signing Files)
+# ============================================
+# 앱 서명에 사용하는 키스토어 파일 - 보안상 절대 커밋하면 안 됨
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+*.cert
+*.pem
+
+# ============================================
+# 프로가드 출력 (ProGuard Output)
+# ============================================
+# ProGuard 난독화 결과물
+/proguard
+*.mapping
+
+# ============================================
+# Fastlane 메타데이터 (Fastlane Metadata)
+# ============================================
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ============================================
+# Kotlin 관련 (Kotlin)
+# ============================================
+*.kotlin_module
+*.kt.class
+
+# ============================================
+# 빌드 아티팩트 (Build Artifacts)
+# ============================================
+*.class
+*.dex
+*.jar
+# 예외: gradle-wrapper.jar는 커밋해야 함 (팀원 모두 같은 Gradle 버전 사용)
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.zip
+*.tar.gz
+*.rar
+*.so
+*.o
+*.a
+
+# ============================================
+# 노드 모듈 (Node Modules) - React Native 혹은 웹뷰 사용 시
+# ============================================
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ============================================
+# 파이어베이스 설정 (Firebase) - 사용 시 주석 해제
+# ============================================
+# google-services.json
+# GoogleService-Info.plist
+
+# ============================================
+# 커밋해야 하는 파일 (예외 처리)
+# ============================================
+# 다음 파일들은 버전 관리를 위해 커밋해야 함:
+# - gradle-wrapper.properties (Gradle 버전 통일)
+# - gradle.properties (프로젝트 빌드 설정)
+# - build.gradle.kts (빌드 스크립트)
+# - libs.versions.toml (의존성 버전 관리)
+# - settings.gradle.kts (프로젝트 구조)

@@ -1,0 +1,68 @@
+# ============================================
+# 줄 바꿈 문자 설정 (Line Ending Configuration)
+# ============================================
+# 팀 환경에서 Windows와 macOS 간 줄 바꿈 문제 해결
+# - 저장소에는 항상 LF (Unix 스타일)로 저장
+# - Windows 사용자는 체크아웃 시 자동으로 CRLF로 변환
+# - macOS/Linux 사용자는 LF 그대로 유지
+
+# 기본적으로 모든 텍스트 파일은 LF로 저장
+* text=auto eol=lf
+
+# ============================================
+# Kotlin & Java 파일
+# ============================================
+*.kt text eol=lf
+*.java text eol=lf
+*.kts text eol=lf
+
+# ============================================
+# Gradle 파일
+# ============================================
+*.gradle text eol=lf
+*.gradle.kts text eol=lf
+gradle-wrapper.jar binary
+
+# ============================================
+# XML & 프로퍼티 파일
+# ============================================
+*.xml text eol=lf
+*.properties text eol=lf
+*.toml text eol=lf
+
+# ============================================
+# 스크립트 파일
+# ============================================
+*.sh text eol=lf
+gradlew text eol=lf
+
+# ============================================
+# 문서 파일
+# ============================================
+*.md text eol=lf
+*.txt text eol=lf
+
+# ============================================
+# 바이너리 파일 (변환하지 않음)
+# ============================================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.apk binary
+*.aab binary
+*.jar binary
+*.class binary
+*.dex binary
+*.so binary
+*.aar binary
+*.keystore binary
+*.jks binary
+
+# ============================================
+# Windows 배치 파일은 CRLF 유지
+# ============================================
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
