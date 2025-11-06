@@ -20,7 +20,7 @@ Android 애플리케이션 프로젝트입니다.
   - 최신 버전 권장
   - 다운로드: [Android Studio 공식 사이트](https://developer.android.com/studio)
 
-### 자동 설치되는 항목 (필요 없음)
+### 자동 설치되는 항목
 
 - ✅ **Gradle**: 프로젝트에 포함되어 있음 (`gradle-wrapper.jar`)
 - ✅ **Android SDK**: Android Studio 설치 시 자동 포함
@@ -31,7 +31,6 @@ Android 애플리케이션 프로젝트입니다.
 
 ```bash
 git clone <저장소-URL>
-cd Eye_on
 ```
 
 ### 2. Android Studio에서 열기
@@ -117,22 +116,14 @@ Eye_on/
 
 ## 🤝 팀 협업 가이드
 
-### 커밋 전 확인사항
+### 커밋 전 확인사항 ********중요*********
 
 - ✅ 코드가 정상적으로 빌드되는지 확인
-- ✅ `local.properties` 파일을 커밋하지 않았는지 확인 (자동으로 무시됨)
+- ✅ `local.properties` 파일을 커밋하지 않았는지 확인 (자동으로 무시됨 그럼에도 체크해야함)
 - ✅ 빌드 결과물 (`/build`, `*.apk`)을 커밋하지 않았는지 확인
 
-### 브랜치 전략
-
-(팀에서 정한 브랜치 전략을 여기에 추가하세요)
 
 ## 📝 추가 정보
 
 - **패키지명**: `ac.sbmax002.eye_on`
 - **앱 ID**: `ac.sbmax002.eye_on`
-
-## 📞 문의
-
-프로젝트 관련 문의사항이 있으면 팀원들에게 연락하세요.
-
