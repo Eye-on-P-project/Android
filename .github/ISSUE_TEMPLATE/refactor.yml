@@ -1,23 +1,14 @@
 name: "🧼 Refactor"
 description: "리팩토링"
-title: "[REFACTOR] EYE-XX"
+title: "[REFACTOR] EYE-XX 작업 개요"
 labels: ["refactor"]
 body:
   - type: input
-    id: notion_id
-    attributes:
-      label: "Notion Task ID"
-      description: "예: EYE-21"
-      placeholder: "EYE-21"
-    validations:
-      required: true
-
-  - type: input
     id: notion_title
     attributes:
-      label: "업무 제목"
+      label: "작업 개요"
       description: "예: 홈 화면 상태 관리 리팩토링"
-      placeholder: "업무 제목을 입력하세요"
+      placeholder: "작업 개요를 입력하세요"
     validations:
       required: true
 

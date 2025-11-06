@@ -1,23 +1,14 @@
 name: "✨ Feature"
 description: "새 기능/화면 구현"
-title: "[FEAT] EYE-XX"
+title: "[FEAT] EYE-XX 작업 개요"
 labels: ["feature"]
 body:
   - type: input
-    id: notion_id
-    attributes:
-      label: "Notion Task ID"
-      description: "예: EYE-12"
-      placeholder: "EYE-12"
-    validations:
-      required: true
-
-  - type: input
     id: notion_title
     attributes:
-      label: "업무 제목"
-      description: "예: 메인 페이지 제작"
-      placeholder: "업무 제목을 입력하세요"
+      label: "작업 개요"
+      description: "예: 메인 페이지 제작 - EYE-12"
+      placeholder: "작업 개요를 입력하세요"
     validations:
       required: true
 
