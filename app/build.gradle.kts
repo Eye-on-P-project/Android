@@ -69,4 +69,7 @@ dependencies {
     // ViewModel과 Compose 연결 (BOM에 포함 안 됨 - 버전 명시 필요)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // 통계용 아이콘 확장
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
 }
