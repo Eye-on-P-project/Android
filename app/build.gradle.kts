@@ -53,23 +53,34 @@ dependencies {
 
     // Compose BOM - 모든 Compose 라이브러리의 버전을 통합 관리
     implementation(platform(libs.androidx.compose.bom))
-    
+
     // Compose UI 기본 라이브러리들 (BOM 사용으로 버전 명시 불필요)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    
+
     // Activity에서 setContent { } 사용하기 위해 필요 (BOM에 포함 안 됨)
     implementation(libs.androidx.activity.compose)
-    
+
     // Navigation Compose - 화면 간 이동을 위한 네비게이션 (BOM에 포함 안 됨)
     implementation(libs.androidx.navigation.compose)
-    
+
     // ViewModel과 Compose 연결 (BOM에 포함 안 됨 - 버전 명시 필요)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // 통계용 아이콘 확장
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
+
+    //camerax - 카메라 기능 1.5.1버전
+    implementation("androidx.camera:camera-camera2:1.5.1") // 실제 하드웨어 제어
+    implementation("androidx.camera:camera-lifecycle:1.5.1") //lifecycle 연동
+    implementation("androidx.camera:camera-view:1.5.1") //화면에 카메라 영상 표시할 때 필요
+    implementation("androidx.camera:camera-core:1.5.1") //기본 엔진 미디어 파이프가 카메라 프레임을 처리할 때 필요
+
+    //  mediapipe task(Vision) 0.10.14
+    implementation("com.google.mediapipe:tasks-core:0.10.14") // 모든 tasks 기능의 기반 로직 제공
+    implementation("com.google.mediapipe:tasks-vision:0.10.14") //안면, 눈, 포즈, 제스처 인식 포함
+
 }
