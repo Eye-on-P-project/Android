@@ -72,4 +72,15 @@ dependencies {
 
     // 통계용 아이콘 확장
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
+
+    //camerax - 카메라 기능 1.5.1버전
+    implementation("androidx.camera:camera-camera2:1.5.1") // 실제 하드웨어 제어
+    implementation("androidx.camera:camera-lifecycle:1.5.1") //lifecycle 연동
+    implementation("androidx.camera:camera-view:1.5.1") //화면에 카메라 영상 표시할 때 필요
+    implementation("androidx.camera:camera-core:1.5.1") //기본 엔진 미디어 파이프가 카메라 프레임을 처리할 때 필요
+
+    //  mediapipe task(Vision) 0.10.14
+    implementation("com.google.mediapipe:tasks-core:0.10.14") // 모든 tasks 기능의 기반 로직 제공
+    implementation("com.google.mediapipe:tasks-vision:0.10.14") //안면, 눈, 포즈, 제스처 인식 포함
+
 }
