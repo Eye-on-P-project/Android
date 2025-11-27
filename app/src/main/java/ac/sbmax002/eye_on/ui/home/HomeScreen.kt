@@ -1,6 +1,8 @@
 package ac.sbmax002.eye_on.ui.home
 
 
+import ac.sbmax002.eye_on.camera.CameraManager
+import ac.sbmax002.eye_on.camera.CameraPreview
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,10 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -38,6 +42,18 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraPermissionGranted by viewModel.cameraPermissionGranted.collectAsStateWithLifecycle()
+
+    //카메라매니저 객체 생성에 필요한 환경 객체와 라이프사이클 객체
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    //카메라매니저 객체 생성
+    val cameraManager = remember{
+        CameraManager(
+            context = context,
+            lifecycleOwner = lifecycleOwner
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -56,13 +72,15 @@ fun HomeScreen(
             if (uiState.isMonitoring) {
                 MonitoringView(
                     uiState = uiState,
-                    onStopMonitoring = { viewModel.stopMonitoring() }
+                    onStopMonitoring = { viewModel.stopMonitoring() },
+                    cameraManager = cameraManager
                 )
             } else {
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
-                    onStartMonitoring = { viewModel.startMonitoring() }
+                    onStartMonitoring = { viewModel.startMonitoring() },
+                    cameraManager = cameraManager
                 )
             }
         }
@@ -128,7 +146,8 @@ private fun HomeTopBar(
 private fun ReadyView(
     uiState: HomeUiState,
     cameraPermissionGranted: Boolean,
-    onStartMonitoring: () -> Unit
+    onStartMonitoring: () -> Unit,
+    cameraManager: CameraManager // 추가
 ) {
     Column(
         modifier = Modifier
@@ -146,7 +165,8 @@ private fun ReadyView(
 
         CameraPreviewArea(
             isReady = uiState.isReady,
-            isFaceDetected = uiState.isFaceDetected
+            isFaceDetected = uiState.isFaceDetected,
+            cameraManager = cameraManager // 추가
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -191,7 +211,8 @@ private fun ReadyView(
 @Composable
 private fun MonitoringView(
     uiState: HomeUiState,
-    onStopMonitoring: () -> Unit
+    onStopMonitoring: () -> Unit,
+    cameraManager: CameraManager // 추가
 ) {
     Column(
         modifier = Modifier
@@ -210,7 +231,8 @@ private fun MonitoringView(
 
         CameraPreviewArea(
             isReady = true,
-            isFaceDetected = uiState.isFaceDetected
+            isFaceDetected = uiState.isFaceDetected,
+            cameraManager = cameraManager // 추가
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -331,7 +353,8 @@ private fun StatusIndicator(
 @Composable
 private fun CameraPreviewArea(
     isReady: Boolean,
-    isFaceDetected: Boolean
+    isFaceDetected: Boolean,
+    cameraManager: CameraManager // 추가
 ) {
     Box(
         modifier = Modifier
@@ -351,52 +374,59 @@ private fun CameraPreviewArea(
                 shape = RoundedCornerShape(16.dp)
             ),
         contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Camera",
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(64.dp)
+    ) { // 카메라 준비되면 실행
+        if (isReady) {
+            CameraPreview(
+                cameraManager = cameraManager,
+                modifier = Modifier.fillMaxSize()
             )
-
-            Text(
-                text = "Camera Preview",
-                fontSize = 16.sp,
-                color = Color(0xFF757575)
-            )
-
-            Text(
-                text = "Align your face within the frame",
-                fontSize = 12.sp,
-                color = Color(0xFF616161),
-                textAlign = TextAlign.Center
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isFaceDetected,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopEnd)
+        } else { // 아니면 기존 ui
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Surface(
-                    color = Color(0xFF4CAF50).copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp)
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Camera",
+                    tint = Color(0xFF757575),
+                    modifier = Modifier.size(64.dp)
+                )
+
+                Text(
+                    text = "Camera Preview",
+                    fontSize = 16.sp,
+                    color = Color(0xFF757575)
+                )
+
+                Text(
+                    text = "Align your face within the frame",
+                    fontSize = 12.sp,
+                    color = Color(0xFF616161),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isFaceDetected,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.TopEnd)
                 ) {
-                    Text(
-                        text = "Face Detected",
-                        fontSize = 12.sp,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                    Surface(
+                        color = Color(0xFF4CAF50).copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Face Detected",
+                            fontSize = 12.sp,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
