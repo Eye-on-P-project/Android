@@ -41,15 +41,8 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    HomeScreen(
-                        viewModel = homeViewModel,
-                        onNavigateToStatistics = {
-                            // TODO: 통계 화면으로 이동
-                        },
-                        onNavigateToSettings = {
-                            // TODO: 설정 화면으로 이동
-                        }
-                    )
+                    // 2. 화면 관리 로직은 EyeOnApp으로 위임 (여기가 핵심!)
+                    EyeOnApp(homeViewModel = homeViewModel)
                 }
             }
         }
