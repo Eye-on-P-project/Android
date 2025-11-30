@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import ac.sbmax002.eye_on.camera.CameraConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,10 +49,18 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     //카메라매니저 객체 생성
-    val cameraManager = remember{
+    val cameraManager = remember {
         CameraManager(
             context = context,
-            lifecycleOwner = lifecycleOwner
+            lifecycleOwner = lifecycleOwner,
+            config = CameraConfig(),   // 필요하면 나중에 전/후면/해상도 바꿀 수 있음
+            onFrameAvailable = { imageProxy ->
+                // 프레임이 들어올 때마다 ViewModel로 전달
+                viewModel.onFrameFromCamera(
+                    imageProxy = imageProxy,
+                    isFrontCamera = true   // 지금은 전면 카메라 기준으로 고정
+                )
+            }
         )
     }
 

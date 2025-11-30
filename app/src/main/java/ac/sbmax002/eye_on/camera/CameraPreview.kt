@@ -32,6 +32,12 @@ fun CameraPreview(
         cameraManager.startCamera(previewView)
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraManager.stopCamera()
+        }
+    }
+
     // Compose → AndroidView
     AndroidView( //compose에서 기존 Android View 시스템을 브릿지
         modifier = modifier,
