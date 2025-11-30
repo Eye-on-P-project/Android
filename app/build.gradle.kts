@@ -53,19 +53,19 @@ dependencies {
 
     // Compose BOM - 모든 Compose 라이브러리의 버전을 통합 관리
     implementation(platform(libs.androidx.compose.bom))
-    
+
     // Compose UI 기본 라이브러리들 (BOM 사용으로 버전 명시 불필요)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    
+
     // Activity에서 setContent { } 사용하기 위해 필요 (BOM에 포함 안 됨)
     implementation(libs.androidx.activity.compose)
-    
+
     // Navigation Compose - 화면 간 이동을 위한 네비게이션 (BOM에 포함 안 됨)
     implementation(libs.androidx.navigation.compose)
-    
+
     // ViewModel과 Compose 연결 (BOM에 포함 안 됨 - 버전 명시 필요)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
