@@ -6,7 +6,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,8 +24,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,6 +110,7 @@ private fun HomeTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 로고 아이콘 박스
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -127,7 +125,7 @@ private fun HomeTopBar(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        // 로고 아이콘 (나중에 실제 로고로 교체 가능)
+                        // 로고 아이콘 들어갈 자리
                     }
                     Text(
                         text = "Eye:on",
@@ -191,6 +189,7 @@ private fun HomeTopBar(
 }
 
 
+// 모니터링 시작 버튼 누르기 전
 @Composable
 private fun ReadyView(
     uiState: HomeUiState,
@@ -215,6 +214,7 @@ private fun ReadyView(
             ),
             exit = fadeOut(animationSpec = tween(200))
         ) {
+            //
             ModeSelector(
                 selectedMode = uiState.appMode,
                 onModeSelected = onModeSelected,
@@ -252,7 +252,7 @@ private fun ReadyView(
             )
 
             Text(
-                text = "• Keep device mounted securely while driving",
+                text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF757575),
@@ -263,6 +263,7 @@ private fun ReadyView(
     }
 }
 
+// 모니터링 시작 버튼 누르고 나서 화면
 @Composable
 private fun MonitoringView(
     uiState: HomeUiState,
@@ -325,7 +326,7 @@ private fun MonitoringView(
             )
 
             Text(
-                text = "• Keep device mounted securely while driving",
+                text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF757575),
@@ -336,6 +337,7 @@ private fun MonitoringView(
     }
 }
 
+// 하단 모니터링 시작/종료 버튼의 모체? 그런 느낌
 @Composable
 private fun AnimatedButton(
     onClick: () -> Unit,

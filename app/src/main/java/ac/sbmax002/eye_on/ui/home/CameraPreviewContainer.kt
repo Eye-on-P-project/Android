@@ -15,7 +15,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,6 +25,7 @@ import ac.sbmax002.eye_on.camera.CameraManager
 import ac.sbmax002.eye_on.camera.CameraConfig
 import android.util.Log
 import android.view.ViewGroup
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun CameraPreviewContainer(
@@ -152,7 +152,7 @@ fun CameraPreviewContainer(
                         modifier = Modifier
                     )
 
-                    // 안내 텍스트 (피그마 디자인에 맞춰 카메라 프리뷰 위에 오버레이)
+                    // 안내 텍스트 (카메라 프리뷰 위에 오버레이)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -188,7 +188,7 @@ fun CameraPreviewContainer(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // 플레이스홀더 아이콘 (나중에 실제 아이콘으로 교체 가능)
+                    // 플레이스홀더 아이콘 들어갈 위치
                 }
 
                 // 안내 메시지
@@ -225,8 +225,8 @@ private fun CircularGuideOverlay(
     isFaceDetected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // 원형 가이드 크기 (나중에 쉽게 변경 가능)
-    val guideSize = 192.dp
+    // 원형 가이드 크기
+    val guideSize = 256.dp
     
     Box(
         modifier = modifier.size(guideSize),
