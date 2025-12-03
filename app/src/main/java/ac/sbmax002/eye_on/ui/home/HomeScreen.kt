@@ -54,7 +54,7 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             val isCameraReady = cameraPermissionGranted && uiState.isReady
-            
+
             // UI 레이어 먼저 렌더링 (레이아웃 계산을 위해)
             if (uiState.isMonitoring) {
                 MonitoringView(
@@ -71,7 +71,7 @@ fun HomeScreen(
                     isCameraReady = isCameraReady
                 )
             }
-            
+
             // 카메라 프리뷰를 절대 위치로 배치 (UI 요소들과 겹치지 않도록)
             // key를 사용하여 뷰 전환 시에도 인스턴스 유지
             key("shared_camera_preview") {

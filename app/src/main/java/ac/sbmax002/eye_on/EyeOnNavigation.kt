@@ -47,12 +47,13 @@ fun EyeOnApp(
             )
         }
 
-        // 2. 통계 화면 (새로 만든 기능)
+// 2. 통계 화면 (여기만 살짝 수정)
         composable(EyeOnDestinations.STATISTICS) {
             ac.sbmax002.eye_on.ui.statistics.StatisticsScreen(
-                viewModel = statisticsViewModel, // 뷰모델 전달
+                // [수정] 네비게이션 구조 변경 없이 ViewModel만 전달
+                homeViewModel = homeViewModel,
+                viewModel = statisticsViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                // [신규] 리스트 클릭 시 상세 화면으로 이동
                 onNavigateToDetail = { sessionId ->
                     navController.navigate("${EyeOnDestinations.DETAIL}/$sessionId")
                 }
