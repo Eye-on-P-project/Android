@@ -7,11 +7,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import ac.sbmax002.eye_on.repository.AppStateRepository
 
 class HomeViewModel : ViewModel() {
-
-    private val _uiState = MutableStateFlow(HomeUiState())
+    
+    // HomeUiState 초기값을 AppStateRepository의 현재 값과 동기화
+    private val _uiState = MutableStateFlow(
+        HomeUiState(appMode = AppStateRepository.getCurrentAppMode())
+    )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    
+    // 앱 상태 Repository에서 공유 상태를 가져옴 (Singleton이므로 직접 접근)
+    // 다른 화면에서는 이 StateFlow를 직접 구독 가능
+    val appMode: StateFlow<AppMode> = AppStateRepository.appMode
 
     private val _cameraPermissionGranted = MutableStateFlow(false)
     val cameraPermissionGranted: StateFlow<Boolean> = _cameraPermissionGranted.asStateFlow()
@@ -68,10 +76,13 @@ class HomeViewModel : ViewModel() {
 
     fun selectMode(mode: AppMode) {
         Log.d("HomeViewModel", "Mode selected: ${mode.name}")
+        // 공유 상태 Repository에 업데이트 (모든 화면에 자동 반영됨)
+        AppStateRepository.setAppMode(mode)
+        // HomeUiState도 동기화 (기존 코드 호환성 유지)
         _uiState.value = _uiState.value.copy(
             appMode = mode
         )
-        Log.d("HomeViewModel", "Current appMode: ${_uiState.value.appMode.name}")
+        Log.d("HomeViewModel", "Current appMode: ${AppStateRepository.getCurrentAppMode().name}")
     }
 
     fun updateCameraInitialized(initialized: Boolean) {
