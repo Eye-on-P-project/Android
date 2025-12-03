@@ -1,6 +1,6 @@
 package ac.sbmax002.eye_on.ui.home
 
-
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +24,13 @@ class HomeViewModel : ViewModel() {
     }
 
     fun startMonitoring() {
+        Log.d("HomeViewModel", "startMonitoring() called")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isMonitoring = true,
                 monitoringStartTime = System.currentTimeMillis()
             )
+            Log.d("HomeViewModel", "Monitoring started. isMonitoring: ${_uiState.value.isMonitoring}")
         }
     }
 
@@ -63,13 +65,18 @@ class HomeViewModel : ViewModel() {
             System.currentTimeMillis() - _uiState.value.monitoringStartTime
         } else 0L
     }
-}
 
-data class HomeUiState(
-    val isReady: Boolean = false,
-    val isMonitoring: Boolean = false,
-    val isFaceDetected: Boolean = false,
-    val monitoringStartTime: Long = 0L,
-    val lastSessionDuration: Long = 0L,
-    val drowsinessDetectionCount: Int = 0
-)
+    fun selectMode(mode: AppMode) {
+        Log.d("HomeViewModel", "Mode selected: ${mode.name}")
+        _uiState.value = _uiState.value.copy(
+            appMode = mode
+        )
+        Log.d("HomeViewModel", "Current appMode: ${_uiState.value.appMode.name}")
+    }
+
+    fun updateCameraInitialized(initialized: Boolean) {
+        _uiState.value = _uiState.value.copy(
+            cameraInitialized = initialized
+        )
+    }
+}

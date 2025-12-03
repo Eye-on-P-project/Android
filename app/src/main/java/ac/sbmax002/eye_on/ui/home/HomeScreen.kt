@@ -46,24 +46,50 @@ fun HomeScreen(
                 onSettingsClick = onNavigateToSettings
             )
         },
-        containerColor = Color(0xFF0A0A0A)
+        containerColor = Color(0xFF1A1A1A)
     ) { paddingValues ->
         Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            val isCameraReady = cameraPermissionGranted && uiState.isReady
+            
+            // UI 레이어 먼저 렌더링 (레이아웃 계산을 위해)
             if (uiState.isMonitoring) {
                 MonitoringView(
                     uiState = uiState,
-                    onStopMonitoring = { viewModel.stopMonitoring() }
+                    onStopMonitoring = { viewModel.stopMonitoring() },
+                    isCameraReady = isCameraReady
                 )
             } else {
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
-                    onStartMonitoring = { viewModel.startMonitoring() }
+                    onStartMonitoring = { viewModel.startMonitoring() },
+                    onModeSelected = { mode -> viewModel.selectMode(mode) },
+                    isCameraReady = isCameraReady
                 )
+            }
+            
+            // 카메라 프리뷰를 절대 위치로 배치 (UI 요소들과 겹치지 않도록)
+            // key를 사용하여 뷰 전환 시에도 인스턴스 유지
+            key("shared_camera_preview") {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                ) {
+                    CameraPreviewContainer(
+                        isReady = isCameraReady,
+                        isFaceDetected = uiState.isFaceDetected,
+                        onFaceDetectionChanged = { detected ->
+                            viewModel.updateFaceDetection(detected)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
@@ -78,7 +104,8 @@ private fun HomeTopBar(
     Surface(
         color = Color(0xFF1A1A1A),
         shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-        shadowElevation = 6.dp
+        shadowElevation = 8.dp,
+        tonalElevation = 0.dp
     ) {
         TopAppBar(
             title = {
@@ -86,33 +113,73 @@ private fun HomeTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Eye:on Logo",
-                        tint = Color(0xFF2196F3),
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFF007AFF),
+                                        Color(0xFF0051D5)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // 로고 아이콘 (나중에 실제 로고로 교체 가능)
+                    }
                     Text(
                         text = "Eye:on",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        letterSpacing = (-0.45).sp
                     )
                 }
             },
             actions = {
-                IconButton(onClick = onStatisticsClick) {
+                IconButton(
+                    onClick = onStatisticsClick,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF2A2A2A),
+                                    Color(0xFF1F1F1F)
+                                )
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = "Statistics",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(onClick = onSettingsClick) {
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF2A2A2A),
+                                    Color(0xFF1F1F1F)
+                                )
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             },
@@ -128,61 +195,69 @@ private fun HomeTopBar(
 private fun ReadyView(
     uiState: HomeUiState,
     cameraPermissionGranted: Boolean,
-    onStartMonitoring: () -> Unit
+    onStartMonitoring: () -> Unit,
+    onModeSelected: (AppMode) -> Unit,
+    isCameraReady: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        StatusIndicator(
-            text = "Ready",
-            isActive = uiState.isReady
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        CameraPreviewArea(
-            isReady = uiState.isReady,
-            isFaceDetected = uiState.isFaceDetected
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // 상단: 모드 선택기
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
+                initialOffsetY = { -20 },
+                animationSpec = tween(300)
+            ),
+            exit = fadeOut(animationSpec = tween(200))
         ) {
-            Text(
-                text = "Ready to Monitor",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-                textAlign = TextAlign.Center
+            ModeSelector(
+                selectedMode = uiState.appMode,
+                onModeSelected = onModeSelected,
+                modifier = Modifier.fillMaxWidth()
             )
+        }
 
-            Text(
-                text = "Position your face within the frame",
-                fontSize = 14.sp,
-                color = Color(0xFF9E9E9E),
-                textAlign = TextAlign.Center
-            )
+        Spacer(modifier = Modifier.weight(1f))
 
+        // 중앙: 카메라 프리뷰는 HomeScreen에서 관리하므로 여기서는 공간만 차지
+        // 실제 카메라는 HomeScreen 레벨에서 렌더링됨
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.75f))
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // 하단: 시작 버튼
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             AnimatedButton(
-                onClick = onStartMonitoring,
-                enabled = cameraPermissionGranted && uiState.isReady,
-                backgroundColor = Color(0xFF2196F3),
+                onClick = {
+                    android.util.Log.d("HomeScreen", "Start monitoring button clicked")
+                    onStartMonitoring()
+                },
+                // TODO: MediaPipe 연결 후 isFaceDetected 조건 다시 추가
+                enabled = cameraPermissionGranted && uiState.isReady, // && uiState.isFaceDetected,
+                backgroundColor = Color(0xFF007AFF),
                 disabledBackgroundColor = Color(0xFF424242),
-                text = "Start Monitoring"
+                text = "모니터링 시작",
+                modifier = Modifier.fillMaxWidth()
             )
 
             Text(
                 text = "• Keep device mounted securely while driving",
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = Color(0xFF757575),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                letterSpacing = 0.sp
             )
         }
     }
@@ -191,62 +266,71 @@ private fun ReadyView(
 @Composable
 private fun MonitoringView(
     uiState: HomeUiState,
-    onStopMonitoring: () -> Unit
+    onStopMonitoring: () -> Unit,
+    isCameraReady: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        StatusIndicator(
-            text = "Monitoring",
-            isActive = true,
-            isMonitoring = true
-        )
+        Spacer(modifier = Modifier.weight(1f))
 
-        Spacer(modifier = Modifier.height(32.dp))
+        // 중앙: 카메라 프리뷰는 HomeScreen에서 관리하므로 여기서는 공간만 차지
+        // 실제 카메라는 HomeScreen 레벨에서 렌더링됨
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.75f))
 
-        CameraPreviewArea(
-            isReady = true,
-            isFaceDetected = uiState.isFaceDetected
-        )
+        Spacer(modifier = Modifier.weight(1f))
 
-        Spacer(modifier = Modifier.height(32.dp))
-
+        // 하단: 안내 텍스트 및 중단 버튼
         Column(
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Text(
-                text = "Monitoring in Progress",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Monitoring in Progress",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    letterSpacing = (-0.44).sp
+                )
 
-            Text(
-                text = "App will minimize to floating icon",
-                fontSize = 14.sp,
-                color = Color(0xFF9E9E9E),
-                textAlign = TextAlign.Center
-            )
+                Text(
+                    text = "App will minimize to floating icon",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xFF99A1AF),
+                    textAlign = TextAlign.Center,
+                    letterSpacing = (-0.15).sp
+                )
+            }
 
             AnimatedButton(
                 onClick = onStopMonitoring,
                 enabled = true,
                 backgroundColor = Color(0xFFE53935),
                 disabledBackgroundColor = Color(0xFF424242),
-                text = "Stop Monitoring"
+                text = "모니터링 종료",
+                modifier = Modifier.fillMaxWidth()
             )
 
             Text(
                 text = "• Keep device mounted securely while driving",
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = Color(0xFF757575),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                letterSpacing = 0.sp
             )
         }
     }
@@ -273,28 +357,56 @@ private fun AnimatedButton(
         label = "button_scale"
     )
 
+    val buttonBackground = if (enabled) {
+        Brush.linearGradient(
+            colors = listOf(
+                backgroundColor,
+                backgroundColor.copy(alpha = 0.9f)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            colors = listOf(
+                disabledBackgroundColor,
+                disabledBackgroundColor.copy(alpha = 0.9f)
+            )
+        )
+    }
+
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(64.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
         colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            disabledContainerColor = disabledBackgroundColor
+            containerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         interactionSource = interactionSource
     ) {
-        Text(
-            text = text,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = buttonBackground,
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White,
+                letterSpacing = (-0.45).sp
+            )
+        }
     }
 }
 
@@ -328,77 +440,3 @@ private fun StatusIndicator(
     }
 }
 
-@Composable
-private fun CameraPreviewArea(
-    isReady: Boolean,
-    isFaceDetected: Boolean
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.75f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1A1A1A))
-            .border(
-                width = 2.dp,
-                brush = Brush.linearGradient(
-                    colors = if (isReady) {
-                        listOf(Color(0xFF2196F3), Color(0xFF1976D2))
-                    } else {
-                        listOf(Color(0xFF424242), Color(0xFF303030))
-                    }
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Camera",
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(64.dp)
-            )
-
-            Text(
-                text = "Camera Preview",
-                fontSize = 16.sp,
-                color = Color(0xFF757575)
-            )
-
-            Text(
-                text = "Align your face within the frame",
-                fontSize = 12.sp,
-                color = Color(0xFF616161),
-                textAlign = TextAlign.Center
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isFaceDetected,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopEnd)
-            ) {
-                Surface(
-                    color = Color(0xFF4CAF50).copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Face Detected",
-                        fontSize = 12.sp,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            }
-        }
-    }
-}
