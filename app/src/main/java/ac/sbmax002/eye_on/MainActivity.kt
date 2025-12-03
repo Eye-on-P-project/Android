@@ -14,9 +14,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import ac.sbmax002.eye_on.ui.home.CameraPermissionHandler
-import ac.sbmax002.eye_on.ui.home.HomeScreen
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.theme.EyeOnTheme
+import ac.sbmax002.eye_on.navigation.EyeOnApp
 
 
 class MainActivity : ComponentActivity() {

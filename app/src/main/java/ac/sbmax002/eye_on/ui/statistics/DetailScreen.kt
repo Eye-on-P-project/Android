@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ac.sbmax002.eye_on.model.statistics.SessionEvent
 
 @Composable
 fun DetailScreen(
@@ -217,3 +218,4 @@ fun IntrinsicHeightRow(content: @Composable RowScope.() -> Unit) {
         content = content
     )
 }
+

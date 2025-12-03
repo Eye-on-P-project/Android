@@ -1,6 +1,5 @@
 package ac.sbmax002.eye_on.ui.home
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,12 +63,3 @@ class HomeViewModel : ViewModel() {
         } else 0L
     }
 }
-
-data class HomeUiState(
-    val isReady: Boolean = false,
-    val isMonitoring: Boolean = false,
-    val isFaceDetected: Boolean = false,
-    val monitoringStartTime: Long = 0L,
-    val lastSessionDuration: Long = 0L,
-    val drowsinessDetectionCount: Int = 0
-)
