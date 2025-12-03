@@ -9,7 +9,7 @@ import kotlin.math.hypot
 class EarCalculator {
 
     /**
-     * eyePoints 리스트는 p1~p6 순서로 들어온다고 가정한다.
+     * eyePoints 리스트는 p1~p6 순서로 들어옴
      * EAR = (||p2 - p6|| + ||p3 - p5||) / (2 * ||p1 - p4||)
      */
     fun calculateEar(eyePoints: List<NormalizedLandmark>): Float {

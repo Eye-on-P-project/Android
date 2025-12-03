@@ -2,6 +2,7 @@ package ac.sbmax002.eye_on.model.pipeline
 
 import ac.sbmax002.eye_on.model.vision.FaceLandmarkerHelper
 import android.content.Context
+import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
@@ -36,10 +37,16 @@ class FaceProcessingPipeline(
                 imageProxy.close()
             } catch (_: Exception) { /* ignore */ }
 
+            //테스트 로그
+            Log.e("FacePipeline", "process error: ${e.message}", e)
             listener.onPipelineError(
                 "FaceProcessing failed: ${e.message ?: "unknown error"}"
             )
         }
+    }
+
+    fun reset() {
+        drowsinessDetector.reset()
     }
 
     override fun onError(error: String, errorCode: Int) {
@@ -51,6 +58,14 @@ class FaceProcessingPipeline(
 
     override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
         val faceResult = resultBundle.result
+
+        // 지연시간 로그 출력
+        Log.d(
+            "FacePipeline",
+            "inferenceTime=${resultBundle.inferenceTime}ms, " +
+                    "timestamp=${faceResult.timestampMs()}, " +
+                    "faces=${faceResult.faceLandmarks().size}"
+        )
 
         // 1. 얼굴이 하나도 없으면 바로 결과 내려주고 끝
         if (faceResult.faceLandmarks().isEmpty()) {
@@ -65,7 +80,7 @@ class FaceProcessingPipeline(
             return
         }
 
-        // 지금은 maxNumFaces = 1 기준으로 0번만 사용
+        //  maxNumFaces = 1  기준으로 0번만 사용
         val landmarks = faceResult.faceLandmarks()[0]
 
         // 2. ROI 추출
