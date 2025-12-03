@@ -1,4 +1,4 @@
-package ac.sbmax002.eye_on
+package ac.sbmax002.eye_on.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
@@ -13,70 +13,70 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsScreen
 import ac.sbmax002.eye_on.ui.statistics.DetailScreen
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 
-// 화면 경로(Route) 정의
-object EyeOnDestinations {
-    const val HOME = "home"
-    const val STATISTICS = "statistics"
-    const val DETAIL = "detail"
-    const val SETTINGS = "settings"
-}
-
+/**
+ * 앱의 메인 네비게이션 컴포저블
+ * 
+ * 모든 화면 전환을 관리하는 NavHost를 포함합니다.
+ * 
+ * @param homeViewModel 홈 화면의 ViewModel
+ * @param statisticsViewModel 통계 화면의 ViewModel (기본값으로 자동 생성)
+ */
 @Composable
 fun EyeOnApp(
     homeViewModel: HomeViewModel,
-    statisticsViewModel: ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel = androidx.lifecycle.viewmodel.compose.viewModel() // ViewModel 주입 위치 변경 추천
-){
+    statisticsViewModel: StatisticsViewModel = viewModel()
+) {
     // 네비게이션 컨트롤러 생성 (화면 이동 관리자)
     val navController = rememberNavController()
 
-    // 네비게이션 호스트 (여기서 화면을 갈아끼워줍니다)
+    // 네비게이션 호스트 (모든 화면을 여기서 관리)
     NavHost(
         navController = navController,
-        startDestination = EyeOnDestinations.HOME
+        startDestination = Routes.HOME
     ) {
         // 1. 홈 화면
-        composable(EyeOnDestinations.HOME) {
+        composable(Routes.HOME) {
             HomeScreen(
                 viewModel = homeViewModel,
                 onNavigateToStatistics = {
-                    navController.navigate(EyeOnDestinations.STATISTICS)
+                    navController.navigate(Routes.STATISTICS)
                 },
                 onNavigateToSettings = {
-                    navController.navigate(EyeOnDestinations.SETTINGS)
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
 
-// 2. 통계 화면 (여기만 살짝 수정)
-        composable(EyeOnDestinations.STATISTICS) {
-            ac.sbmax002.eye_on.ui.statistics.StatisticsScreen(
-                // [수정] 네비게이션 구조 변경 없이 ViewModel만 전달
+        // 2. 통계 화면
+        composable(Routes.STATISTICS) {
+            StatisticsScreen(
                 homeViewModel = homeViewModel,
                 viewModel = statisticsViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDetail = { sessionId ->
-                    navController.navigate("${EyeOnDestinations.DETAIL}/$sessionId")
+                    navController.navigate(Routes.detail(sessionId))
                 }
             )
         }
 
-        // 통계 상세 화면 (Argument 처리)
+        // 3. 통계 상세 화면 (Argument 처리)
         composable(
-            route = "${EyeOnDestinations.DETAIL}/{sessionId}",
+            route = "${Routes.DETAIL}/{sessionId}",
             arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
         ) { backStackEntry ->
             val sessionId = backStackEntry.arguments?.getString("sessionId") ?: return@composable
 
             DetailScreen(
                 sessionId = sessionId,
-                viewModel = statisticsViewModel, // 데이터 공유를 위해 동일한 뷰모델 사용
+                viewModel = statisticsViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        // 3. 설정 화면 (나중에 구현)
-        composable(EyeOnDestinations.SETTINGS) {
+        // 4. 설정 화면 (나중에 구현)
+        composable(Routes.SETTINGS) {
             // SettingsScreen(...)
         }
     }
 }
+
