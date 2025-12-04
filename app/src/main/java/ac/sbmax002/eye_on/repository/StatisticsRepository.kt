@@ -2,6 +2,7 @@ package ac.sbmax002.eye_on.repository
 
 import ac.sbmax002.eye_on.model.statistics.DrivingSession
 import ac.sbmax002.eye_on.model.statistics.SessionEvent
+import ac.sbmax002.eye_on.ui.home.AppMode // AppMode import 필수
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -31,21 +32,22 @@ class StatisticsRepository {
 
     private fun generateDummyData() {
         val today = LocalDate.now()
-        val locations = listOf("Gangnam", "Seongnam", "Busan", "Incheon", "Seoul Station", "Highway", "Home", "Office")
+        // 운전 모드용 장소 목록
+        val drivingLocations = listOf("Gangnam", "Seongnam", "Busan", "Incheon", "Seoul Station", "Highway", "Home", "Office")
 
         // 1. [주간 탭용] 최근 0~6일 전 데이터 15개 생성
         repeat(15) { i ->
-            createRandomSession(idStart = 0, index = i, baseDate = today, minDays = 0, maxDays = 6, locations = locations)
+            createRandomSession(idStart = 0, index = i, baseDate = today, minDays = 0, maxDays = 6, locations = drivingLocations)
         }
 
         // 2. [월간 탭용] 최근 7~30일 전 데이터 15개 생성
         repeat(15) { i ->
-            createRandomSession(idStart = 100, index = i, baseDate = today, minDays = 7, maxDays = 30, locations = locations)
+            createRandomSession(idStart = 100, index = i, baseDate = today, minDays = 7, maxDays = 30, locations = drivingLocations)
         }
 
         // 3. [전체 탭용] 최근 31~180일 전 데이터 15개 생성
         repeat(15) { i ->
-            createRandomSession(idStart = 200, index = i, baseDate = today, minDays = 31, maxDays = 180, locations = locations)
+            createRandomSession(idStart = 200, index = i, baseDate = today, minDays = 31, maxDays = 180, locations = drivingLocations)
         }
     }
 
@@ -71,13 +73,23 @@ class StatisticsRepository {
         val lvl1 = Random.nextInt(0, 8)
         val lvl2 = Random.nextInt(0, 3)
 
-        // 상세 타임라인 이벤트 생성
+        // [변경] 랜덤하게 모드 결정 (50% 확률로 운전 또는 스터디)
+        val randomMode = if (Random.nextBoolean()) AppMode.DRIVING else AppMode.STUDY
+
+        // [변경] 모드에 따라 장소 텍스트 다르게 설정
+        val finalLocation = if (randomMode == AppMode.STUDY) {
+            listOf("Library", "Cafe", "Home", "Study Room", "School").random()
+        } else {
+            locations.random() // 운전 모드면 파라미터로 받은 지역명 사용
+        }
+
+        // 상세 타임라인 이벤트 생성 (메시지도 모드에 따라 다르게 할 수 있음)
         val events = mutableListOf<SessionEvent>()
         repeat(lvl1) {
-            events.add(createRandomEvent(startTime, durationMin, 1))
+            events.add(createRandomEvent(startTime, durationMin, 1, randomMode))
         }
         repeat(lvl2) {
-            events.add(createRandomEvent(startTime, durationMin, 2))
+            events.add(createRandomEvent(startTime, durationMin, 2, randomMode))
         }
         events.sortBy { it.time }
 
@@ -86,23 +98,33 @@ class StatisticsRepository {
                 id = "${idStart + index}",
                 dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                 time = startTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                location = locations.random(),
+                location = finalLocation,
                 durationMinutes = durationMin,
                 durationStr = formatDuration(durationMin),
                 level1Alerts = lvl1,
                 level2Alerts = lvl2,
                 rawDateTime = dateTime,
-                events = events
+                events = events,
+                mode = randomMode // [중요] 1번에서 추가한 mode 필드에 값 주입
             )
         )
     }
 
-    private fun createRandomEvent(startTime: LocalTime, maxDurationMin: Int, level: Int): SessionEvent {
+    // 이벤트 생성 시 모드 정보 전달
+    private fun createRandomEvent(startTime: LocalTime, maxDurationMin: Int, level: Int, mode: AppMode): SessionEvent {
         val eventTime = startTime.plusMinutes(Random.nextLong(1, maxDurationMin.toLong()))
         val durationSec = Random.nextInt(2, 10)
+
+        // 모드에 따라 경고 메시지 내용 변경
+        val message = if (mode == AppMode.DRIVING) {
+            if (level == 1) "Drowsiness detected" else "Sleep warning"
+        } else {
+            if (level == 1) "Distraction detected" else "Away from seat"
+        }
+
         return SessionEvent(
             time = eventTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-            message = if (level == 1) "Drowsiness detected" else "Sleep warning",
+            message = message,
             duration = "${durationSec}s",
             level = level
         )
@@ -114,4 +136,3 @@ class StatisticsRepository {
         return if (h > 0) "${h}h ${m}m" else "${m}m"
     }
 }
-
