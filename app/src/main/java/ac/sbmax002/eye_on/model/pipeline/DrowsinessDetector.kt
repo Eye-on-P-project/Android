@@ -63,7 +63,7 @@ class DrowsinessDetector(
         val inWarmup = processedFrameCount < warmupFrameThreshold
 
         if (inWarmup) {
-            // 👉 워밍업 동안에는 상태를 무조건 NORMAL 로 고정
+            // 워밍업 동안에는 상태를 무조건 NORMAL 로 고정
             //    (이때 baselineEar 만 학습되는 느낌)
             closedFrameCount = 0
             openFrameCount = 0
