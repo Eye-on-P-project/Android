@@ -1,5 +1,7 @@
 package ac.sbmax002.eye_on.model.pipeline
 
+import ac.sbmax002.eye_on.DTO.DrowsinessState
+
 /**
  * 한 쪽 눈 상태
  */
@@ -8,13 +10,6 @@ data class EyeState(
     val ear: Float,      // 이 프레임의 EAR 값
     val isClosed: Boolean  // 이 프레임에서 "감겼다" 여부 (threshold 기반)
 )
-
-// 졸음 상태 3단계
-enum class DrowsinessState {
-    NORMAL,   // 평상시
-    DROWSY,   // 졸음
-    SLEEPING  // 잔다 (오래 감고 있음)
-}
 
 // 전체 파이프라인 결과
 data class PipelineResult(

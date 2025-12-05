@@ -1,5 +1,7 @@
 package ac.sbmax002.eye_on.model.pipeline
 
+import ac.sbmax002.eye_on.DTO.DrowsinessState
+
 /**
  * EAR 기반 졸음 상태 감지기
  *

@@ -1,10 +1,10 @@
 package ac.sbmax002.eye_on.model.pipeline
 
+import ac.sbmax002.eye_on.DTO.DrowsinessState
 import ac.sbmax002.eye_on.model.vision.FaceLandmarkerHelper
 import android.content.Context
 import android.util.Log
 import androidx.camera.core.ImageProxy
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
 /**
  * CameraX 프레임 -> MediaPipe FaceLandmarker -> ROI -> EAR -> 졸음 상태
