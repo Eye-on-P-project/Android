@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -94,12 +93,7 @@ class FloatingWindowManager(private val context: Context) {
                 )
             }
             
-            // 클릭 리스너 - 원래 앱으로 돌아가기
-            setOnClickListener {
-                openMainActivity()
-            }
-            
-            // 드래그 리스너
+            // 드래그와 클릭을 모두 처리하는 TouchListener 사용
             setOnTouchListener(FloatingIconTouchListener())
         }
         
@@ -131,13 +125,16 @@ class FloatingWindowManager(private val context: Context) {
     }
     
     /**
-     * 플로팅 아이콘 드래그 리스너
+     * 플로팅 아이콘 드래그 및 클릭 리스너
+     * 드래그와 클릭을 구분하여 처리
      */
     private inner class FloatingIconTouchListener : View.OnTouchListener {
         private var initialX = 0
         private var initialY = 0
         private var initialTouchX = 0f
         private var initialTouchY = 0f
+        private var isDragging = false
+        private val CLICK_THRESHOLD = 10 // 픽셀 단위, 이 값 이내 이동이면 클릭으로 판단
         
         override fun onTouch(view: View, event: MotionEvent): Boolean {
             when (event.action) {
@@ -146,13 +143,28 @@ class FloatingWindowManager(private val context: Context) {
                     initialY = (view.layoutParams as WindowManager.LayoutParams).y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val params = view.layoutParams as WindowManager.LayoutParams
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager?.updateViewLayout(view, params)
+                    val deltaX = kotlin.math.abs(event.rawX - initialTouchX)
+                    val deltaY = kotlin.math.abs(event.rawY - initialTouchY)
+                    
+                    // 일정 거리 이상 이동하면 드래그로 판단
+                    if (deltaX > CLICK_THRESHOLD || deltaY > CLICK_THRESHOLD) {
+                        isDragging = true
+                        val params = view.layoutParams as WindowManager.LayoutParams
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager?.updateViewLayout(view, params)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP -> {
+                    // 드래그가 아니면 클릭으로 판단하여 앱으로 복귀
+                    if (!isDragging) {
+                        openMainActivity()
+                    }
                     return true
                 }
             }
@@ -161,21 +173,52 @@ class FloatingWindowManager(private val context: Context) {
     }
     
     /**
-     * 메인 Activity 열기
+     * 메인 Activity 열기 (원래 앱 화면으로 복귀)
      */
     private fun openMainActivity() {
+        Log.d(TAG, "Opening main activity")
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         }
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open main activity", e)
+        }
     }
     
     /**
-     * 플로팅 윈도우 숨김
+     * 플로팅 윈도우 숨김 (임시, 다시 보일 수 있음)
      */
     fun hideFloatingWindow() {
         Log.d(TAG, "Hiding floating window")
-        removeFloatingWindow()
+        floatingView?.visibility = View.GONE
+    }
+    
+    /**
+     * 플로팅 윈도우 보이기 (숨긴 것을 다시 보이게)
+     */
+    fun showFloatingWindowIfExists() {
+        Log.d(TAG, "Showing floating window if exists")
+        floatingView?.visibility = View.VISIBLE
+    }
+    
+    /**
+     * 플로팅 윈도우 완전히 제거 (모니터링 종료 시)
+     */
+    fun removeFloatingWindow() {
+        floatingView?.let { view ->
+            try {
+                windowManager?.removeView(view)
+                Log.d(TAG, "Floating window removed")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing floating window", e)
+            }
+            floatingView = null
+        }
     }
     
     /**
@@ -200,20 +243,6 @@ class FloatingWindowManager(private val context: Context) {
         }
     }
     
-    /**
-     * 플로팅 윈도우 제거
-     */
-    fun removeFloatingWindow() {
-        floatingView?.let { view ->
-            try {
-                windowManager?.removeView(view)
-                Log.d(TAG, "Floating window removed")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error removing floating window", e)
-            }
-            floatingView = null
-        }
-    }
     
     private fun Int.dpToPx(context: Context): Int {
         val density = context.resources.displayMetrics.density

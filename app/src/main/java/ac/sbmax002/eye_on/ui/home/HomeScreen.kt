@@ -57,8 +57,30 @@ fun HomeScreen(
 
             val context = LocalContext.current
             
-            // UI 레이어 먼저 렌더링 (레이아웃 계산을 위해)
             if (uiState.isMonitoring) {
+                // 모니터링 중일 때: 프리뷰는 위에, 버튼은 아래에
+                
+                // 카메라 프리뷰를 Top bar 밑에 배치
+                key("shared_camera_preview") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                    ) {
+                        CameraPreviewContainer(
+                            isReady = isCameraReady,
+                            isFaceDetected = uiState.isFaceDetected,
+                            isMonitoring = uiState.isMonitoring,
+                            onFaceDetectionChanged = { detected ->
+                                viewModel.updateFaceDetection(detected)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                
+                // MonitoringView를 하단에 배치
                 MonitoringView(
                     uiState = uiState,
                     onStopMonitoring = {
@@ -66,45 +88,45 @@ fun HomeScreen(
                         MonitoringService.stopMonitoring(context)
                     },
                     onSwitchToFloating = {
-                        // 서비스가 이미 실행 중이면 그냥 앱만 백그라운드로
-                        // 서비스 시작 (이미 실행 중이면 무시됨)
                         MonitoringService.startMonitoring(context)
-                        // 앱을 백그라운드로 전환
                         (context as? Activity)?.moveTaskToBack(true)
                     },
-                    isCameraReady = isCameraReady
+                    isCameraReady = isCameraReady,
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             } else {
+                // 모니터링 시작 전: 기존 레이아웃 유지
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
                     onStartMonitoring = {
                         viewModel.startMonitoring()
                         MonitoringService.startMonitoring(context)
+                        // 바로 플로팅 모드로 전환
+                        (context as? Activity)?.moveTaskToBack(true)
                     },
                     onModeSelected = { mode -> viewModel.selectMode(mode) },
                     isCameraReady = isCameraReady
                 )
-            }
-
-            // 카메라 프리뷰를 절대 위치로 배치 (UI 요소들과 겹치지 않도록)
-            // key를 사용하여 뷰 전환 시에도 인스턴스 유지
-            key("shared_camera_preview") {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                ) {
-                    CameraPreviewContainer(
-                        isReady = isCameraReady,
-                        isFaceDetected = uiState.isFaceDetected,
-                        isMonitoring = uiState.isMonitoring, // 모니터링 상태 전달
-                        onFaceDetectionChanged = { detected ->
-                            viewModel.updateFaceDetection(detected)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                
+                // 카메라 프리뷰를 중앙에 배치
+                key("shared_camera_preview") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        CameraPreviewContainer(
+                            isReady = isCameraReady,
+                            isFaceDetected = uiState.isFaceDetected,
+                            isMonitoring = uiState.isMonitoring,
+                            onFaceDetectionChanged = { detected ->
+                                viewModel.updateFaceDetection(detected)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -288,34 +310,19 @@ private fun MonitoringView(
     uiState: HomeUiState,
     onStopMonitoring: () -> Unit,
     onSwitchToFloating: () -> Unit,
-    isCameraReady: Boolean
+    isCameraReady: Boolean,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 중앙: 카메라 프리뷰는 HomeScreen에서 관리하므로 여기서는 공간만 차지
-        // 실제 카메라는 HomeScreen 레벨에서 렌더링됨
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.75f))
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 하단: 안내 텍스트 및 중단 버튼
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = "Monitoring in Progress",
@@ -362,9 +369,9 @@ private fun MonitoringView(
                 textAlign = TextAlign.Center,
                 letterSpacing = 0.sp
             )
-        }
     }
 }
+
 
 // 하단 모니터링 시작/종료 버튼의 모체? 그런 느낌
 @Composable

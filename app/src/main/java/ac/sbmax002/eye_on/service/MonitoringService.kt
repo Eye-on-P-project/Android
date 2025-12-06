@@ -15,7 +15,6 @@ import ac.sbmax002.eye_on.camera.ServiceCameraManager
 import ac.sbmax002.eye_on.model.pipeline.FaceProcessingPipeline
 import ac.sbmax002.eye_on.model.pipeline.PipelineListener
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult
-import androidx.camera.core.ImageProxy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -207,6 +206,20 @@ class MonitoringService : Service(), PipelineListener {
      */
     fun getCameraManager(): ServiceCameraManager? {
         return cameraManager
+    }
+    
+    /**
+     * 플로팅 아이콘 숨기기 (Activity가 포그라운드일 때)
+     */
+    fun hideFloatingIcon() {
+        floatingWindowManager?.hideFloatingWindow()
+    }
+    
+    /**
+     * 플로팅 아이콘 보이기 (Activity가 백그라운드일 때)
+     */
+    fun showFloatingIcon() {
+        floatingWindowManager?.showFloatingWindowIfExists()
     }
     
     companion object {
