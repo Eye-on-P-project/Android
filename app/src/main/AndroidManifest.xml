@@ -4,6 +4,13 @@
 
     <!-- 카메라 권한 -->
     <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- 플로팅 윈도우 권한 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Foreground Service 권한 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 
     <!-- 카메라 하드웨어 -->
     <uses-feature
@@ -32,6 +39,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- 모니터링 서비스 -->
+        <service
+            android:name=".service.MonitoringService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
     </application>
 
 </manifest>
