@@ -24,6 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import ac.sbmax002.eye_on.service.MonitoringService
+import android.app.Activity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,18 +55,33 @@ fun HomeScreen(
         ) {
             val isCameraReady = cameraPermissionGranted && uiState.isReady
 
+            val context = LocalContext.current
+            
             // UI 레이어 먼저 렌더링 (레이아웃 계산을 위해)
             if (uiState.isMonitoring) {
                 MonitoringView(
                     uiState = uiState,
-                    onStopMonitoring = { viewModel.stopMonitoring() },
+                    onStopMonitoring = {
+                        viewModel.stopMonitoring()
+                        MonitoringService.stopMonitoring(context)
+                    },
+                    onSwitchToFloating = {
+                        // 서비스가 이미 실행 중이면 그냥 앱만 백그라운드로
+                        // 서비스 시작 (이미 실행 중이면 무시됨)
+                        MonitoringService.startMonitoring(context)
+                        // 앱을 백그라운드로 전환
+                        (context as? Activity)?.moveTaskToBack(true)
+                    },
                     isCameraReady = isCameraReady
                 )
             } else {
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
-                    onStartMonitoring = { viewModel.startMonitoring() },
+                    onStartMonitoring = {
+                        viewModel.startMonitoring()
+                        MonitoringService.startMonitoring(context)
+                    },
                     onModeSelected = { mode -> viewModel.selectMode(mode) },
                     isCameraReady = isCameraReady
                 )
@@ -81,6 +99,7 @@ fun HomeScreen(
                     CameraPreviewContainer(
                         isReady = isCameraReady,
                         isFaceDetected = uiState.isFaceDetected,
+                        isMonitoring = uiState.isMonitoring, // 모니터링 상태 전달
                         onFaceDetectionChanged = { detected ->
                             viewModel.updateFaceDetection(detected)
                         },
@@ -268,6 +287,7 @@ private fun ReadyView(
 private fun MonitoringView(
     uiState: HomeUiState,
     onStopMonitoring: () -> Unit,
+    onSwitchToFloating: () -> Unit,
     isCameraReady: Boolean
 ) {
     Column(
@@ -307,7 +327,7 @@ private fun MonitoringView(
                 )
 
                 Text(
-                    text = "App will minimize to floating icon",
+                    text = "플로팅 모드로 전환하여 다른 앱을 사용할 수 있습니다",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFF99A1AF),
@@ -315,6 +335,15 @@ private fun MonitoringView(
                     letterSpacing = (-0.15).sp
                 )
             }
+
+            AnimatedButton(
+                onClick = onSwitchToFloating,
+                enabled = true,
+                backgroundColor = Color(0xFF007AFF),
+                disabledBackgroundColor = Color(0xFF424242),
+                text = "플로팅 모드로 전환",
+                modifier = Modifier.fillMaxWidth()
+            )
 
             AnimatedButton(
                 onClick = onStopMonitoring,
