@@ -48,6 +48,7 @@ class CameraManager(
         // ImageAnalysis UseCase
         imageAnalysis = ImageAnalysis.Builder() // 카메라 프레임을 받아서 분석하는 usecae builder
             .setTargetResolution(targetSize) //분석용 프레임 해상도 지정
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888) // 모델이 RGBA_8888로 포멧을 사용
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)//프레임이 많이 들어 왔을 떄 오래된 프레임은 버림
             .build()
             .also {
