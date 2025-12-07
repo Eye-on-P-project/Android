@@ -1,6 +1,7 @@
 package ac.sbmax002.eye_on.model.pipeline
 
 import ac.sbmax002.eye_on.DTO.DrowsinessState
+import android.graphics.Bitmap
 
 /**
  * 한 쪽 눈 상태
@@ -17,7 +18,11 @@ data class PipelineResult(
     val isFaceDetected: Boolean,
     val leftEye: EyeState?,
     val rightEye: EyeState?,
-    val drowsinessState: DrowsinessState
+    val drowsinessState: DrowsinessState,
+
+    // 왼/오른쪽 눈 미리보기 Bitmap
+    val leftEyeBitmap: Bitmap? = null,
+    val rightEyeBitmap: Bitmap? = null
 ) {
     // 필요하면 이전처럼 Boolean 으로도 쓸 수 있게
     val isDrowsy: Boolean

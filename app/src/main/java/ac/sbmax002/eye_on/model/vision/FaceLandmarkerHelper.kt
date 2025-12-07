@@ -48,6 +48,10 @@ class FaceLandmarkerHelper(
     // If the Face Landmarker will not change, a lazy val would be preferable.
     private var faceLandmarker: FaceLandmarker? = null // 모델 인스턴스 보관
 
+    // 클래스 바디 상단 쪽에 멤버 추가
+    private val pendingFrameBitmaps = mutableMapOf<Long, Bitmap>()
+
+
     init {
         setupFaceLandmarker() // 생성 시 모델/옵션 초기화
     }
@@ -188,6 +192,11 @@ class FaceLandmarkerHelper(
             matrix, true
         )
 
+        // 이 프레임의 Bitmap을 timestamp 키로 저장
+        synchronized(pendingFrameBitmaps) {
+            pendingFrameBitmaps[frameTime] = rotatedBitmap
+        }
+
         // 모델이 요구하는 MPImage로 래핑, 바로 추론에 사용 가능
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
@@ -298,40 +307,41 @@ class FaceLandmarkerHelper(
 
     // Accepted a Bitmap and runs face landmarker inference on it to return
     // results back to the caller
-    fun detectImage(image: Bitmap): ResultBundle? {
-        if (runningMode != RunningMode.IMAGE) {
-            throw IllegalArgumentException(
-                "Attempting to call detectImage" +
-                        " while not using RunningMode.IMAGE"
-            )
-        }
-
-
-        // Inference time is the difference between the system time at the
-        // start and finish of the process
-        val startTime = SystemClock.uptimeMillis()
-
-        // Convert the input Bitmap object to an MPImage object to run inference
-        val mpImage = BitmapImageBuilder(image).build()
-
-        // Run face landmarker using MediaPipe Face Landmarker API
-        faceLandmarker?.detect(mpImage)?.also { landmarkResult ->
-            val inferenceTimeMs = SystemClock.uptimeMillis() - startTime
-            return ResultBundle(
-                landmarkResult,
-                inferenceTimeMs,
-                image.height,
-                image.width
-            )
-        }
-
-        // If faceLandmarker?.detect() returns null, this is likely an error. Returning null
-        // to indicate this.
-        faceLandmarkerHelperListener?.onError(
-            "Face Landmarker failed to detect."
-        )
-        return null
-    }
+    //이미지 처리하는 함수는 주석처리
+//    fun detectImage(image: Bitmap): ResultBundle? {
+//        if (runningMode != RunningMode.IMAGE) {
+//            throw IllegalArgumentException(
+//                "Attempting to call detectImage" +
+//                        " while not using RunningMode.IMAGE"
+//            )
+//        }
+//
+//
+//        // Inference time is the difference between the system time at the
+//        // start and finish of the process
+//        val startTime = SystemClock.uptimeMillis()
+//
+//        // Convert the input Bitmap object to an MPImage object to run inference
+//        val mpImage = BitmapImageBuilder(image).build()
+//
+//        // Run face landmarker using MediaPipe Face Landmarker API
+//        faceLandmarker?.detect(mpImage)?.also { landmarkResult ->
+//            val inferenceTimeMs = SystemClock.uptimeMillis() - startTime
+//            return ResultBundle(
+//                landmarkResult,
+//                inferenceTimeMs,
+//                image.height,
+//                image.width
+//            )
+//        }
+//
+//        // If faceLandmarker?.detect() returns null, this is likely an error. Returning null
+//        // to indicate this.
+//        faceLandmarkerHelperListener?.onError(
+//            "Face Landmarker failed to detect."
+//        )
+//        return null
+//    }
 
     // LIVE_STREAM 결과 콜백으로 호출되는 내부 함수.
     private fun returnLivestreamResult(
@@ -342,12 +352,18 @@ class FaceLandmarkerHelper(
             val finishTimeMs = SystemClock.uptimeMillis() //지금 시각(ms) 추론이 끝나 콜백이 불린 순간
             val inferenceTime = finishTimeMs - result.timestampMs() //추론 지연시간 계산
 
+            // 👇 이 결과에 해당하는 프레임 Bitmap 꺼내기
+            val frameBitmap: Bitmap? = synchronized(pendingFrameBitmaps) {
+                pendingFrameBitmaps.remove(result.timestampMs())
+            }
+
             faceLandmarkerHelperListener?.onResults( //외부(호출자)에게 정상 결과 전달
                 ResultBundle( // 데이터를 하나로 묶음
                     result, //원본 결과 객체(랜드마크, 블렌드셰입 등)
                     inferenceTime,
                     input.height,
-                    input.width
+                    input.width,
+                    frameBitmap = frameBitmap
                 )
             )
         }
@@ -370,6 +386,8 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
+        // 추가 : 이 결과가 나온 프레임의 회전/미러 적용된 Bitmap
+        val frameBitmap: Bitmap?
     )
 
     data class VideoResultBundle(

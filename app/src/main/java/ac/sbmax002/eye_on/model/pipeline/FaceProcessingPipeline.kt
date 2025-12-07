@@ -3,8 +3,10 @@ package ac.sbmax002.eye_on.model.pipeline
 import ac.sbmax002.eye_on.DTO.DrowsinessState
 import ac.sbmax002.eye_on.model.vision.FaceLandmarkerHelper
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.camera.core.ImageProxy
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
 /**
  * CameraX 프레임 -> MediaPipe FaceLandmarker -> ROI -> EAR -> 졸음 상태
@@ -95,6 +97,15 @@ class FaceProcessingPipeline(
         // 4. 졸음 상태 업데이트 (3단계)
         val drowsinessState = drowsinessDetector.update(leftEar, rightEar)
 
+        // Bitmap이 있을 때만 눈을 잘라낸다
+        val frameBitmap = resultBundle.frameBitmap
+        val leftEyeBitmap = frameBitmap?.let { bmp ->
+            cropEyeBitmap(bmp, eyeRoi.leftEyePoints)
+        }
+        val rightEyeBitmap = frameBitmap?.let { bmp ->
+            cropEyeBitmap(bmp, eyeRoi.rightEyePoints)
+        }
+
         // 5. ViewModel에 넘겨줄 DTO 만들기
         val result = PipelineResult(
             frameTimestampMs = faceResult.timestampMs(),
@@ -111,7 +122,9 @@ class FaceProcessingPipeline(
                     isClosed = drowsinessDetector.isEyeClosed(ear)
                 )
             },
-            drowsinessState = drowsinessState
+            drowsinessState = drowsinessState,
+            leftEyeBitmap = leftEyeBitmap,
+            rightEyeBitmap = rightEyeBitmap
         )
 
         listener.onPipelineResult(result)
@@ -128,4 +141,84 @@ class FaceProcessingPipeline(
         )
         listener.onPipelineResult(result)
     }
+
+    // 파일 상단에 필요하다면
+// import android.graphics.Bitmap
+// import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+
+    /**
+     * 프레임 Bitmap과 눈 랜드마크 리스트를 받아서
+     * 눈 주변부를 넉넉하게 잘라낸 작은 Bitmap을 만든다.
+     *
+     * - 눈이 감겨도 주변부가 같이 보이도록 margin을 준다.
+     * - bbox가 너무 작아지면 최소 크기를 강제해서 "뭉개짐" 방지.
+     */
+    private fun cropEyeBitmap(
+        frame: Bitmap,
+        eyePoints: List<NormalizedLandmark>,
+        marginRatio: Float = 0.4f,
+        targetSize: Int = 72
+    ): Bitmap? {
+        if (eyePoints.isEmpty()) return null
+
+        var minX = 1f
+        var minY = 1f
+        var maxX = 0f
+        var maxY = 0f
+
+        for (p in eyePoints) {
+            val x = p.x()
+            val y = p.y()
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+        }
+
+        val width = maxX - minX
+        val height = maxY - minY
+
+        // 눈 주변까지 여유를 주기 위한 margin
+        val marginX = width * marginRatio
+        val marginY = height * marginRatio
+
+        var leftNorm = (minX - marginX).coerceIn(0f, 1f)
+        var topNorm = (minY - marginY).coerceIn(0f, 1f)
+        var rightNorm = (maxX + marginX).coerceIn(0f, 1f)
+        var bottomNorm = (maxY + marginY).coerceIn(0f, 1f)
+
+        // 🔒 최소 박스 크기 강제 (너무 작게 잘라서 픽셀이 뭉개지는 것 방지)
+        val minNormSize = 0.08f // 프레임의 최소 8% 정도는 보이게
+        var curWidthNorm = rightNorm - leftNorm
+        var curHeightNorm = bottomNorm - topNorm
+
+        if (curWidthNorm < minNormSize) {
+            val cx = (leftNorm + rightNorm) / 2f
+            leftNorm = (cx - minNormSize / 2f).coerceIn(0f, 1f)
+            rightNorm = (cx + minNormSize / 2f).coerceIn(0f, 1f)
+            curWidthNorm = rightNorm - leftNorm
+        }
+
+        if (curHeightNorm < minNormSize) {
+            val cy = (topNorm + bottomNorm) / 2f
+            topNorm = (cy - minNormSize / 2f).coerceIn(0f, 1f)
+            bottomNorm = (cy + minNormSize / 2f).coerceIn(0f, 1f)
+            curHeightNorm = bottomNorm - topNorm
+        }
+
+        val leftPx = (leftNorm * frame.width).toInt().coerceIn(0, frame.width - 1)
+        val topPx = (topNorm * frame.height).toInt().coerceIn(0, frame.height - 1)
+        val rightPx = (rightNorm * frame.width).toInt().coerceIn(leftPx + 1, frame.width)
+        val bottomPx = (bottomNorm * frame.height).toInt().coerceIn(topPx + 1, frame.height)
+
+        val cropWidth = rightPx - leftPx
+        val cropHeight = bottomPx - topPx
+
+        if (cropWidth <= 0 || cropHeight <= 0) return null
+
+        val cropped = Bitmap.createBitmap(frame, leftPx, topPx, cropWidth, cropHeight)
+        return Bitmap.createScaledBitmap(cropped, targetSize, targetSize, true)
+    }
+
+
 }
