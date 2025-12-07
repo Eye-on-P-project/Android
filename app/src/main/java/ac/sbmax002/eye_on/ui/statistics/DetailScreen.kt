@@ -11,8 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.* // ★ 수정: runtime.* 로 변경 (getValue, setValue, LaunchedEffect 등 포함)
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,8 +27,16 @@ fun DetailScreen(
     viewModel: StatisticsViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // ID로 데이터 조회
+    // 1. 세션 기본 정보 가져오기 (메모리 캐시 or 리스트에서 조회)
     val session = remember(sessionId) { viewModel.getSessionById(sessionId) }
+
+    // 2. ★ 수정: 이벤트 리스트는 DB에서 비동기로 가져와야 합니다.
+    var events by remember { mutableStateOf<List<SessionEvent>>(emptyList()) }
+
+    // 화면이 진입할 때(sessionId가 변경될 때) DB에서 이벤트를 불러옴
+    LaunchedEffect(sessionId) {
+        events = viewModel.getSessionEvents(sessionId)
+    }
 
     Scaffold(
         topBar = {
@@ -57,7 +64,7 @@ fun DetailScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${session.time} • ${session.durationStr}", // durationStr 사용
+                    text = "${session.time} • ${session.durationStr}",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
@@ -77,10 +84,11 @@ fun DetailScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    itemsIndexed(session.events) { index, event ->
+                    // ★ 수정: session.events가 아니라 로드된 events 상태 변수 사용
+                    itemsIndexed(events) { index, event ->
                         TimelineItem(
                             event = event,
-                            isLast = index == session.events.lastIndex
+                            isLast = index == events.lastIndex
                         )
                     }
                 }
@@ -218,4 +226,3 @@ fun IntrinsicHeightRow(content: @Composable RowScope.() -> Unit) {
         content = content
     )
 }
-
