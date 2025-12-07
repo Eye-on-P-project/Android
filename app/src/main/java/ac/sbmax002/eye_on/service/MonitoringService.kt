@@ -15,6 +15,7 @@ import ac.sbmax002.eye_on.camera.ServiceCameraManager
 import ac.sbmax002.eye_on.model.pipeline.FaceProcessingPipeline
 import ac.sbmax002.eye_on.model.pipeline.PipelineListener
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult
+import ac.sbmax002.eye_on.DTO.DrowsinessState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -189,9 +190,9 @@ class MonitoringService : Service(), PipelineListener {
     // ---------------------------------------------------------------------
     
     override fun onPipelineResult(result: PipelineResult) {
-        Log.d(TAG, "Pipeline result: isDrowsy=${result.isDrowsy}, faceDetected=${result.isFaceDetected}")
+        Log.d(TAG, "Pipeline result: drowsinessState=${result.drowsinessState}, faceDetected=${result.isFaceDetected}")
         // 졸음 상태에 따른 플로팅 아이콘 업데이트
-        floatingWindowManager?.updateDrowsinessState(result.isDrowsy)
+        floatingWindowManager?.updateDrowsinessState(result.drowsinessState)
         // TODO: 사운드 재생 (나중에 구현)
     }
     

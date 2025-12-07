@@ -11,9 +11,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.util.Log
 import androidx.core.content.ContextCompat
 import ac.sbmax002.eye_on.MainActivity
+import ac.sbmax002.eye_on.DTO.DrowsinessState
 
 /**
  * 플로팅 윈도우를 관리하는 매니저
@@ -26,7 +28,8 @@ class FloatingWindowManager(private val context: Context) {
     
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
-    private var isDrowsy = false
+    private var iconImageView: ImageView? = null
+    private var drowsinessState: DrowsinessState = DrowsinessState.NORMAL
     
     init {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
@@ -69,37 +72,49 @@ class FloatingWindowManager(private val context: Context) {
      * 플로팅 아이콘 뷰 생성
      */
     private fun createFloatingIconView(): View {
-        // 간단한 원형 뷰 생성 (일단 기본 아이콘)
+        // 원형 배경과 아이콘을 포함하는 FrameLayout 생성
         val iconView = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ICON_SIZE_DP.dpToPx(context),
                 ICON_SIZE_DP.dpToPx(context)
             )
-            setBackgroundColor(
-                if (isDrowsy) {
-                    ContextCompat.getColor(context, android.R.color.holo_red_dark)
-                } else {
-                    ContextCompat.getColor(context, android.R.color.holo_blue_dark)
-                }
-            )
             
-            // 원형으로 만들기
+            // 원형 배경 설정
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(
-                    if (isDrowsy) {
-                        ContextCompat.getColor(context, android.R.color.holo_red_dark)
-                    } else {
-                        ContextCompat.getColor(context, android.R.color.holo_blue_dark)
-                    }
-                )
+                setColor(getStateColor(drowsinessState))
             }
+            
+            // 아이콘을 넣을 ImageView 생성 (중앙 정렬)
+            iconImageView = ImageView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ICON_SIZE_DP.dpToPx(context) / 2, // 아이콘 크기는 배경의 절반
+                    ICON_SIZE_DP.dpToPx(context) / 2
+                ).apply {
+                    gravity = android.view.Gravity.CENTER
+                }
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                // TODO: 여기에 아이콘 리소스 넣을 수 ㅣㅇㅆ음
+                // setImageResource(R.drawable.ic_eye_on)
+            }
+            addView(iconImageView)
             
             // 드래그와 클릭을 모두 처리하는 TouchListener 사용
             setOnTouchListener(FloatingIconTouchListener())
         }
         
         return iconView
+    }
+    
+    /**
+     * 졸음 상태에 따른 색상 반환
+     */
+    private fun getStateColor(state: DrowsinessState): Int {
+        return when (state) {
+            DrowsinessState.NORMAL -> ContextCompat.getColor(context, android.R.color.holo_blue_dark)
+            DrowsinessState.DROWSY -> ContextCompat.getColor(context, android.R.color.holo_orange_dark)
+            DrowsinessState.SLEEPING -> ContextCompat.getColor(context, android.R.color.holo_red_dark)
+        }
     }
     
     /**
@@ -226,9 +241,9 @@ class FloatingWindowManager(private val context: Context) {
     /**
      * 플로팅 아이콘 상태 업데이트 (졸음 상태에 따라)
      */
-    fun updateDrowsinessState(isDrowsy: Boolean) {
-        Log.d(TAG, "Updating drowsiness state: $isDrowsy")
-        this.isDrowsy = isDrowsy
+    fun updateDrowsinessState(state: DrowsinessState) {
+        Log.d(TAG, "Updating drowsiness state: $state")
+        this.drowsinessState = state
         
         // UI 업데이트는 반드시 메인 스레드에서 실행되어야 함
         Handler(Looper.getMainLooper()).post {
@@ -236,14 +251,10 @@ class FloatingWindowManager(private val context: Context) {
                 // 색상 업데이트
                 view.background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.OVAL
-                    setColor(
-                        if (isDrowsy) {
-                            ContextCompat.getColor(context, android.R.color.holo_red_dark)
-                        } else {
-                            ContextCompat.getColor(context, android.R.color.holo_blue_dark)
-                        }
-                    )
+                    setColor(getStateColor(state))
                 }
+                // TODO: 상태에 따라 아이콘도 변경 가능
+                // iconImageView?.setImageResource(getStateIcon(state))
             }
         }
     }
