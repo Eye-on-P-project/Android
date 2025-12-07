@@ -52,11 +52,13 @@ class MonitoringService : Service(), PipelineListener {
         super.onCreate()
         Log.d(TAG, "MonitoringService onCreate")
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification())
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "MonitoringService onStartCommand")
+        
+        // 서비스가 완전히 시작된 후에 startForeground 호출
+        startForeground(NOTIFICATION_ID, createNotification())
         
         when (intent?.action) {
             ACTION_START_MONITORING -> {

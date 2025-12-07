@@ -1,7 +1,6 @@
 package ac.sbmax002.eye_on
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -16,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.ui.home.CameraPermissionHandler
+import ac.sbmax002.eye_on.ui.home.FloatingWindowPermissionHandler
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.theme.EyeOnTheme
 import ac.sbmax002.eye_on.navigation.EyeOnApp
@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
                             homeViewModel.updateCameraPermission(false)
                         }
                     )
+                    
+                    // 플로팅 윈도우 권한 확인
+                    FloatingWindowPermissionHandler()
 
                     // 2. 화면 관리 로직은 EyeOnApp으로 위임 (여기가 핵심!)
                     EyeOnApp(homeViewModel = homeViewModel)
@@ -95,7 +98,7 @@ class MainActivity : ComponentActivity() {
 
     private fun bindMonitoringService() {
         val intent = Intent(this, MonitoringService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
     }
 
     companion object {
