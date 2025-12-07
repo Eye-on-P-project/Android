@@ -1,6 +1,7 @@
 package ac.sbmax002.eye_on.model.statistics
 
 import java.time.LocalDateTime
+import ac.sbmax002.eye_on.ui.home.AppMode
 
 data class DrivingSession(
     val id: String,
@@ -12,6 +13,7 @@ data class DrivingSession(
     val level1Alerts: Int,
     val level2Alerts: Int,
     val rawDateTime: LocalDateTime, // 정렬 및 필터링용
-    val events: List<SessionEvent> = emptyList()
+    val events: List<SessionEvent> = emptyList(),
+    val mode: AppMode = AppMode.DRIVING
 )
 

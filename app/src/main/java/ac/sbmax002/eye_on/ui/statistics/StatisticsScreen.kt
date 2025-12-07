@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,12 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
+import ac.sbmax002.eye_on.ui.home.AppMode
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun StatisticsScreen(
@@ -35,12 +39,22 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val statsUiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     val isMonitoring = homeUiState.isMonitoring
+    val appMode = statsUiState.appMode
+
+    // 모드에 따른 동적 타이틀 설정
+    val title = if (isMonitoring) {
+        if (appMode == AppMode.DRIVING) "실시간 운행 현황" else "실시간 학습 현황"
+    } else {
+        if (appMode == AppMode.DRIVING) "운전 리포트" else "집중 리포트"
+    }
 
     Scaffold(
         topBar = {
             StatisticsTopBar(
-                title = if (isMonitoring) "실시간 운행 현황" else "Statistics",
+                title = title,
                 onBackClick = onNavigateBack
             )
         },
@@ -52,16 +66,17 @@ fun StatisticsScreen(
                 .padding(paddingValues)
         ) {
             if (isMonitoring) {
-                // [CASE 1] 모니터링 중
+                // [CASE 1] 모니터링 중 화면
                 CurrentSessionView(
                     homeViewModel = homeViewModel,
+                    appMode = appMode,
                     onStopClick = {
                         homeViewModel.stopMonitoring()
                         onNavigateBack()
                     }
                 )
             } else {
-                // [CASE 2] 통계 대시보드 (데이터 연동 완료)
+                // [CASE 2] 통계 대시보드 화면
                 HistoryListView(
                     viewModel = viewModel
                 )
@@ -76,11 +91,13 @@ fun StatisticsScreen(
 @Composable
 fun CurrentSessionView(
     homeViewModel: HomeViewModel,
+    appMode: AppMode,
     onStopClick: () -> Unit
 ) {
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
+    // 1초마다 현재 시간 갱신 (경과 시간 계산용)
     LaunchedEffect(Unit) {
         while(true) {
             currentTime = System.currentTimeMillis()
@@ -88,6 +105,7 @@ fun CurrentSessionView(
         }
     }
 
+    // 경과 시간 계산
     val durationMillis = if (homeUiState.monitoringStartTime > 0) {
         currentTime - homeUiState.monitoringStartTime
     } else 0L
@@ -96,6 +114,25 @@ fun CurrentSessionView(
     val minutes = (durationMillis % 3600000) / 60000
     val durationString = String.format("%d시간 %02d분", hours, minutes)
 
+    // [수정] 시작 시간 포맷팅 (예: "오후 3:45")
+    val startTimeStr = remember(homeUiState.monitoringStartTime) {
+        if (homeUiState.monitoringStartTime > 0) {
+            val date = Date(homeUiState.monitoringStartTime)
+            val formatter = SimpleDateFormat("a h:mm", Locale.KOREA) // 오전/오후 표시
+            formatter.format(date)
+        } else {
+            "--:--"
+        }
+    }
+
+    // 모드별 텍스트 및 색상 설정
+    val isDriving = appMode == AppMode.DRIVING
+    val mainLabel = if (isDriving) "운행 시간" else "학습 시간"
+    val subLabel = if (isDriving) "총 운행 시간" else "총 학습 시간"
+
+    // 운전 모드는 파란색(Blue), 스터디 모드는 주황색(Orange) 테마 사용
+    val themeColor = if (isDriving) Color(0xFF2196F3) else Color(0xFFFF9800)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -103,27 +140,33 @@ fun CurrentSessionView(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            DashboardCard(title = "운행 시간", icon = Icons.Outlined.AccessTime) {
+            // 시간 카드
+            DashboardCard(title = mainLabel, icon = Icons.Outlined.AccessTime, iconTint = themeColor) {
                 Text("시작 시간", color = Color.Gray, fontSize = 14.sp)
-                Text("모니터링 중...", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                // [수정] 여기에 실제 포맷팅된 시작 시간을 표시
+                Text(startTimeStr, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("총 운행 시간", color = Color.Gray, fontSize = 14.sp)
+
+                Text(subLabel, color = Color.Gray, fontSize = 14.sp)
                 Text(durationString, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
             }
 
-            DashboardCard(title = "감지 기록", icon = Icons.Outlined.Visibility) {
+            // 감지 기록 카드
+            DashboardCard(title = "감지 기록", icon = Icons.Outlined.Visibility, iconTint = themeColor) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("졸음 감지 횟수", color = Color.Gray)
+                    Text(if(isDriving) "졸음 감지 횟수" else "집중 저하 횟수", color = Color.Gray)
                     Text("${homeUiState.drowsinessDetectionCount}회", color = Color(0xFFFFC107), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("수면 경고 횟수", color = Color.Gray)
+                    Text(if(isDriving) "수면 경고 횟수" else "자리 비움 경고", color = Color.Gray)
                     Text("0회", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            DashboardCard(title = "이벤트 타임라인", icon = Icons.Default.Warning) {
+            // 이벤트 타임라인
+            DashboardCard(title = "이벤트 타임라인", icon = Icons.Default.Warning, iconTint = themeColor) {
                 Text("실시간 이벤트 대기 중...", color = Color.Gray, fontSize = 14.sp)
             }
         }
@@ -134,7 +177,7 @@ fun CurrentSessionView(
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("모니터링 중단", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(if(isDriving) "운행 종료" else "학습 종료", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -146,12 +189,16 @@ fun CurrentSessionView(
 fun HistoryListView(
     viewModel: StatisticsViewModel
 ) {
-    // 뷰모델 상태 구독 (여기가 핵심!)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
-
-    // 뷰모델의 필터 리스트 사용
     val tabs = viewModel.filters
+
+    // 모드에 따른 UI 분기
+    val isDriving = uiState.appMode == AppMode.DRIVING
+    val themeColor = if (isDriving) Color(0xFF2196F3) else Color(0xFFFF9800)
+
+    val timeTitle = if (isDriving) "총 운행 시간" else "총 학습 시간"
+    val sessionLabel = if (isDriving) "운전 모드" else "스터디 모드"
 
     Column(
         modifier = Modifier
@@ -160,7 +207,7 @@ fun HistoryListView(
             .padding(horizontal = 16.dp)
             .padding(bottom = 20.dp)
     ) {
-        // 1. 상단 탭 (ViewModel 연동)
+        // 1. 상단 탭 (주간/월간/전체)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -170,15 +217,15 @@ fun HistoryListView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEach { tab ->
-                val isSelected = uiState.selectedFilter == tab // 뷰모델 상태와 비교
+                val isSelected = uiState.selectedFilter == tab
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .padding(4.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (isSelected) Color(0xFF2196F3) else Color.Transparent)
-                        .clickable { viewModel.updateFilter(tab) }, // [중요] 클릭 시 뷰모델 업데이트 호출
+                        .background(if (isSelected) themeColor else Color.Transparent)
+                        .clickable { viewModel.updateFilter(tab) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -193,9 +240,8 @@ fun HistoryListView(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 2. 총 운행 시간 카드 (동적 데이터)
-        DashboardCard(title = "총 운행 시간", icon = Icons.Outlined.AccessTime) {
-            // 시간 계산 헬퍼 사용 (분 -> 시간/분)
+        // 2. 총 시간 카드
+        DashboardCard(title = timeTitle, icon = Icons.Outlined.AccessTime, iconTint = themeColor) {
             val h = uiState.totalDrivingMinutes / 60
             val m = uiState.totalDrivingMinutes % 60
 
@@ -207,23 +253,18 @@ fun HistoryListView(
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 필터에 따른 텍스트 변경
             val periodText = when(uiState.selectedFilter) {
                 "주간" -> "최근 7일"
                 "월간" -> "최근 30일"
                 else -> "전체 기간"
             }
-            Text(
-                text = periodText,
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
+            Text(text = periodText, color = Color.Gray, fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. 총 세션 수 카드 (동적 데이터)
-        DashboardCard(title = "총 세션 수", icon = Icons.Default.CalendarToday) {
+        // 3. 총 세션 수 카드
+        DashboardCard(title = "총 세션 수", icon = Icons.Default.CalendarToday, iconTint = themeColor) {
             Text(
                 text = "${uiState.totalSessions}",
                 color = Color.White,
@@ -231,32 +272,27 @@ fun HistoryListView(
                 fontWeight = FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "운전 모드",
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
+            Text(text = sessionLabel, color = Color.Gray, fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. 졸음 감지 현황 카드 (동적 데이터)
-        DashboardCard(title = "졸음 감지", icon = Icons.Outlined.Visibility) {
-            // 졸음 감지 (Yellow)
-            val totalAlerts = (uiState.level1Total + uiState.level2Total).coerceAtLeast(1) // 0으로 나누기 방지
+        // 4. 졸음/집중 감지 현황 카드
+        DashboardCard(title = if(isDriving) "졸음 감지" else "집중 저하 감지", icon = Icons.Outlined.Visibility, iconTint = themeColor) {
+            val totalAlerts = (uiState.level1Total + uiState.level2Total).coerceAtLeast(1)
             val lvl1Ratio = uiState.level1Total.toFloat() / totalAlerts
             val lvl2Ratio = uiState.level2Total.toFloat() / totalAlerts
 
-            // 총 감지 수가 0일 때 그래프가 꽉 차지 않도록 처리
             val safeLvl1Ratio = if (uiState.level1Total == 0) 0f else lvl1Ratio
             val safeLvl2Ratio = if (uiState.level2Total == 0) 0f else lvl2Ratio
 
+            // Level 1 경고
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text("총 감지 횟수", color = Color.Gray, fontSize = 14.sp)
+                Text(if(isDriving) "졸음 감지 횟수" else "주의 산만", color = Color.Gray, fontSize = 14.sp)
                 Text("${uiState.level1Total}회", color = Color(0xFFFFC107), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -270,13 +306,13 @@ fun HistoryListView(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 수면 경고 (Red)
+            // Level 2 경고
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text("수면 경고 횟수", color = Color.Gray, fontSize = 14.sp)
+                Text(if(isDriving) "수면 경고 횟수" else "자리 비움", color = Color.Gray, fontSize = 14.sp)
                 Text("${uiState.level2Total}회", color = Color(0xFFE53935), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -291,18 +327,17 @@ fun HistoryListView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 5. 시간대별 졸음 빈도 (동적 데이터)
-        DashboardCard(title = "시간대별 졸음 빈도", icon = null) {
-            // 그래프 최대값 계산 (가장 큰 막대를 기준으로 비율 정함)
+        // 5. 시간대별 빈도
+        DashboardCard(title = if(isDriving) "시간대별 졸음 빈도" else "시간대별 집중 저하", icon = null, iconTint = null) {
             val maxCount = uiState.timeDistribution.maxOrNull()?.coerceAtLeast(1) ?: 1
 
-            TimeFrequencyRow(label = "오전 (06:00-12:00)", count = uiState.timeDistribution[0], max = maxCount, color = Color(0xFF2196F3))
+            TimeFrequencyRow(label = "오전 (06:00-12:00)", count = uiState.timeDistribution[0], max = maxCount, color = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
             TimeFrequencyRow(label = "오후 (12:00-18:00)", count = uiState.timeDistribution[1], max = maxCount, color = Color(0xFFFFC107))
             Spacer(modifier = Modifier.height(16.dp))
             TimeFrequencyRow(label = "저녁 (18:00-24:00)", count = uiState.timeDistribution[2], max = maxCount, color = Color(0xFFE53935))
             Spacer(modifier = Modifier.height(16.dp))
-            TimeFrequencyRow(label = "새벽 (00:00-06:00)", count = uiState.timeDistribution[3], max = maxCount, color = Color(0xFF2196F3))
+            TimeFrequencyRow(label = "새벽 (00:00-06:00)", count = uiState.timeDistribution[3], max = maxCount, color = themeColor)
         }
     }
 }
@@ -311,7 +346,8 @@ fun HistoryListView(
 @Composable
 fun DashboardCard(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    icon: ImageVector?,
+    iconTint: Color? = Color(0xFF2196F3),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -320,13 +356,12 @@ fun DashboardCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // 헤더 (아이콘 + 제목)
             if (icon != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color(0xFF2196F3),
+                        tint = iconTint ?: Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -335,7 +370,6 @@ fun DashboardCard(
             } else {
                 Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
-
             Spacer(modifier = Modifier.height(16.dp))
             content()
         }
@@ -383,4 +417,3 @@ fun StatisticsTopBar(title: String, onBackClick: () -> Unit) {
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A0A0A))
     )
 }
-
