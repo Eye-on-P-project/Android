@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -228,17 +230,20 @@ class FloatingWindowManager(private val context: Context) {
         Log.d(TAG, "Updating drowsiness state: $isDrowsy")
         this.isDrowsy = isDrowsy
         
-        floatingView?.let { view ->
-            // 색상 업데이트
-            view.background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(
-                    if (isDrowsy) {
-                        ContextCompat.getColor(context, android.R.color.holo_red_dark)
-                    } else {
-                        ContextCompat.getColor(context, android.R.color.holo_blue_dark)
-                    }
-                )
+        // UI 업데이트는 반드시 메인 스레드에서 실행되어야 함
+        Handler(Looper.getMainLooper()).post {
+            floatingView?.let { view ->
+                // 색상 업데이트
+                view.background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(
+                        if (isDrowsy) {
+                            ContextCompat.getColor(context, android.R.color.holo_red_dark)
+                        } else {
+                            ContextCompat.getColor(context, android.R.color.holo_blue_dark)
+                        }
+                    )
+                }
             }
         }
     }
