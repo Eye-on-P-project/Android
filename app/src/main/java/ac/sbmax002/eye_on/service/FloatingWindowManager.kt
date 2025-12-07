@@ -91,7 +91,7 @@ class FloatingWindowManager(private val context: Context) {
                     ICON_SIZE_DP.dpToPx(context) / 2, // 아이콘 크기는 배경의 절반
                     ICON_SIZE_DP.dpToPx(context) / 2
                 ).apply {
-                    gravity = android.view.Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 // TODO: 여기에 아이콘 리소스 넣을 수 ㅣㅇㅆ음
@@ -111,9 +111,9 @@ class FloatingWindowManager(private val context: Context) {
      */
     private fun getStateColor(state: DrowsinessState): Int {
         return when (state) {
-            DrowsinessState.NORMAL -> ContextCompat.getColor(context, android.R.color.holo_blue_dark)
-            DrowsinessState.DROWSY -> ContextCompat.getColor(context, android.R.color.holo_orange_dark)
-            DrowsinessState.SLEEPING -> ContextCompat.getColor(context, android.R.color.holo_red_dark)
+            DrowsinessState.NORMAL -> ContextCompat.getColor(context, android.R.color.holo_blue_light)
+            DrowsinessState.DROWSY -> ContextCompat.getColor(context, android.R.color.holo_orange_light)
+            DrowsinessState.SLEEPING -> ContextCompat.getColor(context, android.R.color.holo_red_light)
         }
     }
     
