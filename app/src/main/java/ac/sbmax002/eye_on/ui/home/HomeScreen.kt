@@ -24,6 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import ac.sbmax002.eye_on.service.MonitoringService
+import android.app.Activity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,40 +55,78 @@ fun HomeScreen(
         ) {
             val isCameraReady = cameraPermissionGranted && uiState.isReady
 
-            // UI 레이어 먼저 렌더링 (레이아웃 계산을 위해)
+            val context = LocalContext.current
+            
             if (uiState.isMonitoring) {
+                // 모니터링 중일 때: 프리뷰는 위에, 버튼은 아래에
+                
+                // 카메라 프리뷰를 Top bar 밑에 배치
+                key("shared_camera_preview") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                    ) {
+                        CameraPreviewContainer(
+                            isReady = isCameraReady,
+                            isFaceDetected = uiState.isFaceDetected,
+                            isMonitoring = uiState.isMonitoring,
+                            onFaceDetectionChanged = { detected ->
+                                viewModel.updateFaceDetection(detected)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                
+                // MonitoringView를 하단에 배치
                 MonitoringView(
                     uiState = uiState,
-                    onStopMonitoring = { viewModel.stopMonitoring() },
-                    isCameraReady = isCameraReady
+                    onStopMonitoring = {
+                        viewModel.stopMonitoring()
+                        MonitoringService.stopMonitoring(context)
+                    },
+                    onSwitchToFloating = {
+                        MonitoringService.startMonitoring(context)
+                        (context as? Activity)?.moveTaskToBack(true)
+                    },
+                    isCameraReady = isCameraReady,
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             } else {
+                // 모니터링 시작 전: 기존 레이아웃 유지
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
-                    onStartMonitoring = { viewModel.startMonitoring() },
+                    onStartMonitoring = {
+                        viewModel.startMonitoring()
+                        MonitoringService.startMonitoring(context)
+                        // 바로 플로팅 모드로 전환
+                        (context as? Activity)?.moveTaskToBack(true)
+                    },
                     onModeSelected = { mode -> viewModel.selectMode(mode) },
                     isCameraReady = isCameraReady
                 )
-            }
-
-            // 카메라 프리뷰를 절대 위치로 배치 (UI 요소들과 겹치지 않도록)
-            // key를 사용하여 뷰 전환 시에도 인스턴스 유지
-            key("shared_camera_preview") {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                ) {
-                    CameraPreviewContainer(
-                        isReady = isCameraReady,
-                        isFaceDetected = uiState.isFaceDetected,
-                        onFaceDetectionChanged = { detected ->
-                            viewModel.updateFaceDetection(detected)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                
+                // 카메라 프리뷰를 중앙에 배치
+                key("shared_camera_preview") {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        CameraPreviewContainer(
+                            isReady = isCameraReady,
+                            isFaceDetected = uiState.isFaceDetected,
+                            isMonitoring = uiState.isMonitoring,
+                            onFaceDetectionChanged = { detected ->
+                                viewModel.updateFaceDetection(detected)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -268,34 +309,20 @@ private fun ReadyView(
 private fun MonitoringView(
     uiState: HomeUiState,
     onStopMonitoring: () -> Unit,
-    isCameraReady: Boolean
+    onSwitchToFloating: () -> Unit,
+    isCameraReady: Boolean,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 중앙: 카메라 프리뷰는 HomeScreen에서 관리하므로 여기서는 공간만 차지
-        // 실제 카메라는 HomeScreen 레벨에서 렌더링됨
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.75f))
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 하단: 안내 텍스트 및 중단 버튼
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = "Monitoring in Progress",
@@ -307,7 +334,7 @@ private fun MonitoringView(
                 )
 
                 Text(
-                    text = "App will minimize to floating icon",
+                    text = "플로팅 모드로 전환하여 다른 앱을 사용할 수 있습니다",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFF99A1AF),
@@ -315,6 +342,15 @@ private fun MonitoringView(
                     letterSpacing = (-0.15).sp
                 )
             }
+
+            AnimatedButton(
+                onClick = onSwitchToFloating,
+                enabled = true,
+                backgroundColor = Color(0xFF007AFF),
+                disabledBackgroundColor = Color(0xFF424242),
+                text = "플로팅 모드로 전환",
+                modifier = Modifier.fillMaxWidth()
+            )
 
             AnimatedButton(
                 onClick = onStopMonitoring,
@@ -333,9 +369,9 @@ private fun MonitoringView(
                 textAlign = TextAlign.Center,
                 letterSpacing = 0.sp
             )
-        }
     }
 }
+
 
 // 하단 모니터링 시작/종료 버튼의 모체? 그런 느낌
 @Composable

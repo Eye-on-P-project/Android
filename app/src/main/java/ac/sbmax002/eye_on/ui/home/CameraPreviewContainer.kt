@@ -32,6 +32,7 @@ fun CameraPreviewContainer(
     isReady: Boolean,
     isFaceDetected: Boolean,
     onFaceDetectionChanged: (Boolean) -> Unit,
+    isMonitoring: Boolean = false, // 모니터링 중 여부
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -63,20 +64,22 @@ fun CameraPreviewContainer(
         )
     }
 
-    // isReady 상태에 따라 카메라 시작/중지만 수행 (재초기화하지 않음)
-    LaunchedEffect(isReady) {
-        if (isReady) {
+    // isReady 상태와 모니터링 상태에 따라 카메라 시작/중지
+    // 모니터링 중일 때는 Activity 카메라를 사용하지 않음 (Service가 카메라를 사용 중)
+    LaunchedEffect(isReady, isMonitoring) {
+        if (isReady && !isMonitoring) {
+            // 모니터링 중이 아니고 준비되었을 때만 카메라 시작
             try {
-                // 카메라 시작 (이미 생성된 인스턴스 사용)
                 cameraManager.startCamera(previewView)
+                Log.d("CameraPreview", "Activity camera started")
             } catch (e: Exception) {
-                // 초기화 실패 시 로그만 남기고 앱은 계속 실행
                 Log.e("CameraPreview", "Failed to start camera", e)
             }
         } else {
-            // isReady가 false가 되면 카메라만 중지 (인스턴스는 유지)
+            // 모니터링 중이거나 준비되지 않았을 때 카메라 중지
             try {
                 cameraManager.stopCamera()
+                Log.d("CameraPreview", "Activity camera stopped (isReady=$isReady, isMonitoring=$isMonitoring)")
             } catch (e: Exception) {
                 Log.e("CameraPreview", "Failed to stop camera", e)
             }
@@ -128,8 +131,8 @@ fun CameraPreviewContainer(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (isReady) {
-            // 실제 카메라 프리뷰
+        if (isReady && !isMonitoring) {
+            // 실제 카메라 프리뷰 (모니터링 중이 아닐 때만)
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -167,6 +170,30 @@ fun CameraPreviewContainer(
                         )
                     }
                 }
+            }
+        } else if (isMonitoring) {
+            // 모니터링 중일 때 표시할 메시지
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "모니터링 중",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    letterSpacing = (-0.44).sp
+                )
+                Text(
+                    text = "Service에서 카메라를 사용 중입니다",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xFF99A1AF),
+                    textAlign = TextAlign.Center,
+                    letterSpacing = (-0.15).sp
+                )
             }
         } else {
             // 카메라 권한이 없을 때 표시할 플레이스홀더
