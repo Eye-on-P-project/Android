@@ -1,5 +1,6 @@
 package ac.sbmax002.eye_on.repository
 
+import ac.sbmax002.eye_on.ui.home.AppMode
 import ac.sbmax002.eye_on.database.StatisticsDao
 import ac.sbmax002.eye_on.model.statistics.DrivingSession
 import ac.sbmax002.eye_on.model.statistics.SessionEvent
@@ -21,7 +22,7 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
     }
 
     // 3. 운전 시작: 새 세션 ID 생성 및 DB 저장
-    suspend fun startDrivingSession(): String {
+    suspend fun startDrivingSession(currentMode: AppMode): String {
         val newSessionId = UUID.randomUUID().toString()
         val now = LocalDateTime.now()
 
@@ -35,7 +36,8 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
             durationStr = "0m",
             level1Alerts = 0,
             level2Alerts = 0,
-            rawDateTime = now
+            rawDateTime = now,
+            mode = currentMode
         )
 
         statisticsDao.insertSession(newSession)

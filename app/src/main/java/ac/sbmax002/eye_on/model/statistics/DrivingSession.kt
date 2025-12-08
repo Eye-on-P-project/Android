@@ -15,7 +15,6 @@ data class DrivingSession(
     val durationStr: String,
     val level1Alerts: Int,
     val level2Alerts: Int,
-    val rawDateTime: LocalDateTime, // ★ TypeConverter 필요 (아래 3번 참고)
-    val mode: AppMode = AppMode.DRIVING // ★ TypeConverter 필요
-    // val events: List<SessionEvent>는 DB 컬럼에서 제외합니다. (관계형으로 해결)
+    val rawDateTime: LocalDateTime, // Converters.kt
+    val mode: AppMode = AppMode.DRIVING // Converters.kt
 )
