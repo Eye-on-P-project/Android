@@ -12,6 +12,7 @@ import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.statistics.StatisticsScreen
 import ac.sbmax002.eye_on.ui.statistics.DetailScreen
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
+import ac.sbmax002.eye_on.ui.settings.SettingsScreen
 
 /**
  * 앱의 메인 네비게이션 컴포저블
@@ -73,9 +74,11 @@ fun EyeOnApp(
             )
         }
 
-        // 4. 설정 화면 (나중에 구현)
+        // 4. 설정 화면
         composable(Routes.SETTINGS) {
-            // SettingsScreen(...)
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

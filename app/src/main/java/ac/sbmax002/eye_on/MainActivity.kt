@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import dagger.hilt.android.AndroidEntryPoint
 import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.ui.home.CameraPermissionHandler
 import ac.sbmax002.eye_on.ui.home.FloatingWindowPermissionHandler
@@ -20,7 +21,7 @@ import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.theme.EyeOnTheme
 import ac.sbmax002.eye_on.navigation.EyeOnApp
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val homeViewModel: HomeViewModel by viewModels()
