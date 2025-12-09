@@ -12,6 +12,7 @@ object Routes {
     const val STATISTICS = "statistics"
     const val DETAIL = "detail"
     const val SETTINGS = "settings"
+    const val LEVEL1_ALERT = "level1_alert"
     
     /**
      * 상세 화면으로 이동하는 경로 생성

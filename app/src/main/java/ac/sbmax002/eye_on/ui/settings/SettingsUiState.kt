@@ -5,7 +5,7 @@ package ac.sbmax002.eye_on.ui.settings
  */
 data class SettingsUiState(
     // 졸음 경고 1단계 설정
-    val level1AlarmSound: AlarmSound = AlarmSound.CHIME,
+    val level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION,
     val level1Volume: Int = 70, // 0-100
     
     // 수면 경고 2단계 설정
@@ -23,9 +23,23 @@ data class SettingsUiState(
 /**
  * 알림음 종류
  */
-enum class AlarmSound(val displayName: String) {
-    CHIME("띵동 (Chime)"),
-    SIREN("사이렌 (Siren)")
+enum class AlarmSound(
+    val displayName: String,
+    val fileName: String
+) {
+    BELL_NOTIFICATION("안내 벨소리", "bell_notification"),
+    FIRE_ALARM("화재 경보음", "fire_alarm_test"),
+    MEGA_HORN("경적 소리", "mega_horn"),
+    SCHOOL_BELL("학교 종소리", "school_bell"),
+    SECURITY_ALARM("보안 경보음", "security_alarm"),
+    SIREN("사이렌", "siren_alarm"),
+    
+    // 하위 호환성을 위한 기존 enum 값들 (deprecated)
+    @Deprecated("Use BELL_NOTIFICATION instead", ReplaceWith("BELL_NOTIFICATION"))
+    CHIME("안내 벨소리", "bell_notification"),
+    
+    @Deprecated("Use SIREN instead", ReplaceWith("SIREN"))
+    SIREN_OLD("사이렌", "siren_alarm")
 }
 
 /**
