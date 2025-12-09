@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose.compiler)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.ksp)
 }
 
@@ -85,6 +87,10 @@ dependencies {
     implementation(libs.mediapipe.tasks.core) // 모든 tasks 기능의 기반 로직 제공
     implementation(libs.mediapipe.tasks.vision) //안면, 눈, 포즈, 제스처 인식 포함
 
+    // Hilt - 의존성 주입
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
     // Room Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

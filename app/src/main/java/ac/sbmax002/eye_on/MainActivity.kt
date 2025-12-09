@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.ViewModelProvider
 import ac.sbmax002.eye_on.database.AppDatabase
 import ac.sbmax002.eye_on.repository.StatisticsRepository
@@ -26,7 +27,7 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModelFactory
 import ac.sbmax002.eye_on.ui.theme.EyeOnTheme
 import ac.sbmax002.eye_on.navigation.EyeOnApp
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     // 1. DB와 Repository는 한 번만 생성해서 공유합니다.
