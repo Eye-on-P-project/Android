@@ -36,7 +36,7 @@ fun StatisticsScreen(
     homeViewModel: HomeViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
-    viewModel: StatisticsViewModel = viewModel()
+    viewModel: StatisticsViewModel //  "= viewModel()" 제거
 ) {
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val statsUiState by viewModel.uiState.collectAsStateWithLifecycle()

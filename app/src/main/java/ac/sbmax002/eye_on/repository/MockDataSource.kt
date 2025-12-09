@@ -9,42 +9,47 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
-/**
- * 더미 데이터를 생성하여 제공하는 전용 객체
- */
 object MockDataSource {
 
-    fun generateDrivingSessions(): List<DrivingSession> {
+    // ★ 반환 타입을 Pair로 변경 (세션 리스트, 이벤트 리스트)
+    // DB 초기 데이터 적재용으로 사용할 수 있게 구조 변경
+    fun generateData(): Pair<List<DrivingSession>, List<SessionEvent>> {
         val sessions = mutableListOf<DrivingSession>()
+        val allEvents = mutableListOf<SessionEvent>()
+
         val today = LocalDate.now()
         val drivingLocations = listOf("Gangnam", "Seongnam", "Busan", "Incheon", "Seoul Station", "Highway", "Home", "Office")
 
-        // 1. [주간] 최근 0~6일 전 데이터
-        repeat(15) { i ->
-            sessions.add(createRandomSession(0, i, today, 0, 6, drivingLocations))
+        var idCounter = 0
+
+        // 데이터 생성 도우미 함수
+        fun addSessions(count: Int, minDays: Int, maxDays: Int) {
+            repeat(count) {
+                val sessionId = idCounter.toString()
+                val (session, events) = createRandomSession(sessionId, today, minDays, maxDays, drivingLocations)
+                sessions.add(session)
+                allEvents.addAll(events)
+                idCounter++
+            }
         }
 
-        // 2. [월간] 최근 7~30일 전 데이터
-        repeat(15) { i ->
-            sessions.add(createRandomSession(100, i, today, 7, 30, drivingLocations))
-        }
+        // 1. [주간]
+        addSessions(15, 0, 6)
+        // 2. [월간]
+        addSessions(15, 7, 30)
+        // 3. [전체]
+        addSessions(15, 31, 180)
 
-        // 3. [전체] 최근 31~180일 전 데이터
-        repeat(15) { i ->
-            sessions.add(createRandomSession(200, i, today, 31, 180, drivingLocations))
-        }
-
-        return sessions
+        return Pair(sessions, allEvents)
     }
 
     private fun createRandomSession(
-        idStart: Int,
-        index: Int,
+        id: String,
         baseDate: LocalDate,
         minDays: Int,
         maxDays: Int,
         locations: List<String>
-    ): DrivingSession {
+    ): Pair<DrivingSession, List<SessionEvent>> { // 세션과 이벤트를 분리해서 반환
         val daysAgo = Random.nextLong(minDays.toLong(), maxDays.toLong() + 1)
         val date = baseDate.minusDays(daysAgo)
 
@@ -58,28 +63,17 @@ object MockDataSource {
         val lvl1 = Random.nextInt(0, 8)
         val lvl2 = Random.nextInt(0, 3)
 
-        // 랜덤하게 모드 결정 (운전 vs 스터디)
         val randomMode = if (Random.nextBoolean()) AppMode.DRIVING else AppMode.STUDY
 
-        // 모드에 따라 장소 텍스트 변경
         val finalLocation = if (randomMode == AppMode.STUDY) {
             listOf("Library", "Cafe", "Home", "Study Room", "School").random()
         } else {
             locations.random()
         }
 
-        // 이벤트 생성
-        val events = mutableListOf<SessionEvent>()
-        repeat(lvl1) {
-            events.add(createRandomEvent(startTime, durationMin, 1, randomMode))
-        }
-        repeat(lvl2) {
-            events.add(createRandomEvent(startTime, durationMin, 2, randomMode))
-        }
-        events.sortBy { it.time }
-
-        return DrivingSession(
-            id = "${idStart + index}",
+        // 세션 생성 (events 필드 제거됨)
+        val session = DrivingSession(
+            id = id,
             dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
             time = startTime.format(DateTimeFormatter.ofPattern("HH:mm")),
             location = finalLocation,
@@ -88,12 +82,23 @@ object MockDataSource {
             level1Alerts = lvl1,
             level2Alerts = lvl2,
             rawDateTime = dateTime,
-            events = events,
             mode = randomMode
         )
+
+        // 이벤트 생성 (sessionId 추가)
+        val events = mutableListOf<SessionEvent>()
+        repeat(lvl1) {
+            events.add(createRandomEvent(id, startTime, durationMin, 1, randomMode))
+        }
+        repeat(lvl2) {
+            events.add(createRandomEvent(id, startTime, durationMin, 2, randomMode))
+        }
+        events.sortBy { it.time }
+
+        return Pair(session, events)
     }
 
-    private fun createRandomEvent(startTime: LocalTime, maxDurationMin: Int, level: Int, mode: AppMode): SessionEvent {
+    private fun createRandomEvent(sessionId: String, startTime: LocalTime, maxDurationMin: Int, level: Int, mode: AppMode): SessionEvent {
         val eventTime = startTime.plusMinutes(Random.nextLong(1, maxDurationMin.toLong()))
         val durationSec = Random.nextInt(2, 10)
 
@@ -104,6 +109,7 @@ object MockDataSource {
         }
 
         return SessionEvent(
+            sessionId = sessionId, // ★ 필수 필드 추가
             time = eventTime.format(DateTimeFormatter.ofPattern("HH:mm")),
             message = message,
             duration = "${durationSec}s",

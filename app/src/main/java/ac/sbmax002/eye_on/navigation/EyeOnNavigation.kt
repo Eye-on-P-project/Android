@@ -13,6 +13,7 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsScreen
 import ac.sbmax002.eye_on.ui.statistics.DetailScreen
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 import ac.sbmax002.eye_on.ui.settings.SettingsScreen
+import ac.sbmax002.eye_on.navigation.Routes
 
 /**
  * 앱의 메인 네비게이션 컴포저블
@@ -25,7 +26,8 @@ import ac.sbmax002.eye_on.ui.settings.SettingsScreen
 @Composable
 fun EyeOnApp(
     homeViewModel: HomeViewModel,
-    statisticsViewModel: StatisticsViewModel = viewModel()
+    // ★ 수정: "= viewModel()" 기본값 제거 (반드시 주입받도록 강제)
+    statisticsViewModel: StatisticsViewModel
 ) {
     // 네비게이션 컨트롤러 생성 (화면 이동 관리자)
     val navController = rememberNavController()
