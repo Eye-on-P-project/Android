@@ -1,19 +1,20 @@
 package ac.sbmax002.eye_on.model.statistics
 
-import java.time.LocalDateTime
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import ac.sbmax002.eye_on.ui.home.AppMode
+import java.time.LocalDateTime
 
+@Entity(tableName = "driving_sessions")
 data class DrivingSession(
-    val id: String,
-    val dateStr: String,   // 표시용 날짜 "2024-11-25"
-    val time: String,      // 시작 시간 "14:30"
-    val location: String,  // 위치
-    val durationMinutes: Int, // 계산용 분 (통계 합산용)
-    val durationStr: String,  // 표시용 "2h 15m" (DetailScreen 등에서 사용)
+    @PrimaryKey val id: String, // UUID 등을 사용하여 고유 문자열 ID 사용
+    val dateStr: String,        // "2024-11-25"
+    val time: String,           // "14:30"
+    val location: String,
+    val durationMinutes: Int,
+    val durationStr: String,
     val level1Alerts: Int,
     val level2Alerts: Int,
-    val rawDateTime: LocalDateTime, // 정렬 및 필터링용
-    val events: List<SessionEvent> = emptyList(),
-    val mode: AppMode = AppMode.DRIVING
+    val rawDateTime: LocalDateTime, // Converters.kt
+    val mode: AppMode = AppMode.DRIVING // Converters.kt
 )
-
