@@ -20,19 +20,20 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getDatabase(context: Context): AppDatabase {
+        fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "eye_on_database" // 폰에 저장될 실제 파일 이름
+                    "eye_on_database" // 실제 디바이스에 만들어질 DB 파일 이름
                 )
-                    // 괄호안 true로 설정시 개발 중 사용하는 기존 데이터 날리고 재생성 코드
-                    // 실제 배포시에는 삭제하거나 Migration 전략을 세워야 함
+                    // 개발 중에는 스키마 바꾸면 기존 데이터 날리고 재생성
+                    // (배포용에서는 Migration 전략 필요)
                     .fallbackToDestructiveMigration()
                     .build()
-                INSTANCE = instance
-                instance
+                    .also { INSTANCE = it }
+//                INSTANCE = instance
+//                instance
             }
         }
     }
