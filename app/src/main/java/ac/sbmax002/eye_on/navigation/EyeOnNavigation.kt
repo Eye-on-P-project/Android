@@ -55,7 +55,12 @@ fun EyeOnApp(
             StatisticsScreen(
                 homeViewModel = homeViewModel,
                 viewModel = statisticsViewModel,
-                onNavigateBack = { navController.popBackStack() },
+// 버그 해결 현재 통계화면 일 때만 popBackStack 실행 (중복 방지)
+                onNavigateBack = {
+                    if (navController.currentDestination?.route == Routes.STATISTICS) {
+                        navController.popBackStack()
+                    }
+                },
                 onNavigateToDetail = { sessionId ->
                     navController.navigate(Routes.detail(sessionId))
                 }
