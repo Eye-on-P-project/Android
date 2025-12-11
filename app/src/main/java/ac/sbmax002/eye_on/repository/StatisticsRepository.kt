@@ -45,7 +45,7 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
     }
 
     // 4. 졸음 이벤트 발생 시: 이벤트 저장 + 세션 경고 횟수 증가
-    suspend fun saveEvent(sessionId: String, message: String, level: Int) {
+    suspend fun saveEvent(sessionId: String, message: String, level: Int, duration: String = "") {
         val now = LocalDateTime.now()
 
         // 이벤트 테이블에 기록
@@ -53,7 +53,7 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
             sessionId = sessionId,
             time = now.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
             message = message,
-            duration = "0s", // 지속 시간 로직 필요시 수정
+            duration = duration,
             level = level
         )
         statisticsDao.insertEvent(event)

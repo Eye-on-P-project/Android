@@ -20,6 +20,15 @@ class HomeViewModel(
     // 현재 실행 중인 세션 ID (DB 저장용)
     private var currentSessionId: String? = null
 
+    // 🔹 졸음 에피소드 추적용 상태
+    // NORMAL -> DROWSY/SLEEPING 진입 시 에피소드 시작,
+    // 다시 NORMAL 될 때 에피소드 종료
+    private var isInAlertState: Boolean = false          // 현재 에피소드 안에 있는지
+    private var alertStartTimestampMs: Long = 0L         // 에피소드 시작 프레임 timestamp
+    private var alertMaxLevel: Int = 0                   // 이 에피소드 동안 도달한 최대 레벨(1/2)
+    private var totalDrowsyDurationMs: Long = 0L         // 세션 동안 누적 졸음 시간(필요시 사용)
+
+
     // HomeUiState 초기값을 AppStateRepository의 현재 값과 동기화
     private val _uiState = MutableStateFlow(
         HomeUiState(appMode = AppStateRepository.getCurrentAppMode())
@@ -47,6 +56,12 @@ class HomeViewModel(
             currentSessionId = repository.startDrivingSession(currentMode)
             Log.d("HomeViewModel", "DB Session Created: $currentSessionId")
 
+            // 🔹 졸음 에피소드 상태 초기화
+            isInAlertState = false
+            alertStartTimestampMs = 0L
+            alertMaxLevel = 0
+            totalDrowsyDurationMs = 0L
+
             _uiState.value = _uiState.value.copy(
                 isMonitoring = true,
                 monitoringStartTime = System.currentTimeMillis(),
@@ -66,6 +81,12 @@ class HomeViewModel(
                 Log.d("HomeViewModel", "DB Session Ended: $sessionId")
             }
             currentSessionId = null
+
+            // 🔹 에피소드 상태 리셋
+            isInAlertState = false
+            alertStartTimestampMs = 0L
+            alertMaxLevel = 0
+            totalDrowsyDurationMs = 0L
 
             val monitoringDuration = if (_uiState.value.monitoringStartTime > 0) {
                 System.currentTimeMillis() - _uiState.value.monitoringStartTime
@@ -91,19 +112,82 @@ class HomeViewModel(
         // UI 업데이트: 얼굴 감지 상태 등
         updateFaceDetection(result.isFaceDetected)
 
-// ★ [수정됨] 상태에 따라 위험 레벨(Level) 결정
+        val state = result.drowsinessState
+
+        // 지금 프레임이 "경고 상태"인지 여부 (DROWSY 또는 SLEEPING)
+        val isAlertNow =
+            (state == DrowsinessState.DROWSY || state == DrowsinessState.SLEEPING)
+
+        // ★ [수정됨] 상태에 따라 위험 레벨(Level) 결정
         // DrowsinessDetector.kt와 PipeLineResult.kt에 정의된 상태를 사용
-        val alertLevel = when (result.drowsinessState) {
+        val alertLevel = when (state) {
             DrowsinessState.DROWSY -> 1   // 조금 졸림 -> Level 1
             DrowsinessState.SLEEPING -> 2 // 완전히 잠 -> Level 2
             else -> 0                     // 정상 -> 저장 안 함
         }
+// 1) NORMAL → DROWSY/SLEEPING : 에피소드 시작
+        if (isAlertNow && !isInAlertState) {
+            isInAlertState = true
+            alertStartTimestampMs = result.frameTimestampMs
+            alertMaxLevel = alertLevel
+            Log.d(
+                "HomeViewModel",
+                "Drowsiness episode started: level=$alertLevel, ts=${result.frameTimestampMs}"
+            )
+        }
+        // 2) 에피소드 진행 중: 더 높은 레벨이 나오면 갱신
+        else if (isAlertNow && isInAlertState) {
+            if (alertLevel > alertMaxLevel) {
+                alertMaxLevel = alertLevel
+            }
+        }
+        // 3) DROWSY/SLEEPING → NORMAL : 에피소드 종료
+        else if (!isAlertNow && isInAlertState) {
+            val endTs = result.frameTimestampMs
+            val durationMs = (endTs - alertStartTimestampMs).coerceAtLeast(0L)
 
-        // 위험 상황(1, 2)일 때만 저장 로직 실행
-        if (alertLevel > 0) {
-            incrementDrowsinessCount(alertLevel)
+            totalDrowsyDurationMs += durationMs
+
+            onDrowsinessEpisodeFinished(alertMaxLevel, durationMs)
+
+            // 상태 리셋
+            isInAlertState = false
+            alertStartTimestampMs = 0L
+            alertMaxLevel = 0
         }
     }
+
+    /**
+     * 졸음 에피소드가 끝났을 때 한 번만 호출:
+     * - DB에 SessionEvent 한 줄 저장
+     * - duration을 "1.2s" 같은 문자열로 포맷해서 넣어줌
+     */
+    private fun onDrowsinessEpisodeFinished(level: Int, durationMs: Long) {
+        val sessionId = currentSessionId ?: return
+        if (level <= 0) return
+
+        // ms → 초 단위 문자열로 변환 (예: 1250ms -> "1.3s")
+        val durationSeconds = durationMs / 1000f
+        val durationStr = String.format("%.1fs", durationSeconds)
+
+        val message = if (level == 2) "Sleep Detected" else "Drowsiness Detected"
+
+        Log.d(
+            "HomeViewModel",
+            "Drowsiness episode finished: level=$level, duration=$durationStr"
+        )
+
+        viewModelScope.launch {
+            repository.saveEvent(
+                sessionId = sessionId,
+                message = message,
+                level = level,
+                duration = durationStr
+            )
+        }
+    }
+
+
 
     // 내부적으로 카운트 증가 및 DB 저장
     private fun incrementDrowsinessCount(level: Int) {
