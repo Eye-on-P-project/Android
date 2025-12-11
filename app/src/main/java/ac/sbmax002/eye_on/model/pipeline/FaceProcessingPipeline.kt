@@ -92,8 +92,12 @@ class FaceProcessingPipeline(
         val rightEar = eyeRoi.rightEyePoints.takeIf { it.isNotEmpty() }
             ?.let { earCalculator.calculateEar(it) }
 
-        // 4. 졸음 상태 업데이트 (3단계)
-        val drowsinessState = drowsinessDetector.update(leftEar, rightEar)
+        // 4. 졸음 상태 업데이트
+        val drowsinessState = drowsinessDetector.update(
+            leftEar = leftEar,
+            rightEar = rightEar,
+            frameTimestampMs = faceResult.timestampMs() // MediaPipe 가 주는 timestamp (ms)
+        )
 
         // 5. ViewModel에 넘겨줄 DTO 만들기
         val result = PipelineResult(
