@@ -52,9 +52,18 @@ class MainActivity : ComponentActivity() {
             monitoringService = binder?.getService()
             isServiceBound = true
             Log.d(TAG, "MonitoringService connected")
+
+            //서비스에서 올라오는 PipelineResult를 HomeViewModel로 전달
+            monitoringService?.setOnPipelineResultListener { result ->
+                homeViewModel.onPipelineResult(result)
+            }
+
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            // 🔹 더 이상 콜백이 불리지 않도록 해제
+            monitoringService?.setOnPipelineResultListener(null)
+
             monitoringService = null
             isServiceBound = false
             Log.d(TAG, "MonitoringService disconnected")
@@ -111,6 +120,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 콜백 해제
+        monitoringService?.setOnPipelineResultListener(null)
         // Service 바인딩 해제
         if (isServiceBound) {
             unbindService(serviceConnection)
