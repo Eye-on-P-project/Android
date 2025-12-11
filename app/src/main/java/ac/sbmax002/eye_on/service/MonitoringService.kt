@@ -37,6 +37,12 @@ class MonitoringService : Service(), PipelineListener {
     private var floatingWindowManager: FloatingWindowManager? = null
     
     private var isMonitoringStarted = false
+
+    // 파이프라인 결과를 Activity/HomeViewModel로 전달하기 위한 콜백
+    private var pipelineResultListener: ((PipelineResult) -> Unit)? = null
+    fun setOnPipelineResultListener(listener: ((PipelineResult) -> Unit)?) {
+        pipelineResultListener = listener
+    }
     
     // Service 바인딩을 위한 Binder
     inner class MonitoringBinder : Binder() {
@@ -140,6 +146,7 @@ class MonitoringService : Service(), PipelineListener {
     
     override fun onDestroy() {
         super.onDestroy()
+        pipelineResultListener = null
         Log.d(TAG, "MonitoringService onDestroy")
         stopMonitoring()
     }
@@ -193,6 +200,10 @@ class MonitoringService : Service(), PipelineListener {
         Log.d(TAG, "Pipeline result: drowsinessState=${result.drowsinessState}, faceDetected=${result.isFaceDetected}")
         // 졸음 상태에 따른 플로팅 아이콘 업데이트
         floatingWindowManager?.updateDrowsinessState(result.drowsinessState)
+
+        // Activity/HomeViewModel 쪽으로도 결과 전달
+        pipelineResultListener?.invoke(result)
+
         // TODO: 사운드 재생 (나중에 구현)
     }
     
