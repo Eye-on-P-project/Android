@@ -13,6 +13,7 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsScreen
 import ac.sbmax002.eye_on.ui.statistics.DetailScreen
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 import ac.sbmax002.eye_on.ui.settings.SettingsScreen
+import ac.sbmax002.eye_on.ui.settings.Level1AlertScreen
 import ac.sbmax002.eye_on.navigation.Routes
 
 /**
@@ -84,6 +85,16 @@ fun EyeOnApp(
         // 4. 설정 화면
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToLevel1Alert = {
+                    navController.navigate(Routes.LEVEL1_ALERT)
+                }
+            )
+        }
+
+        // 5. 1단계 알림음 설정 화면
+        composable(Routes.LEVEL1_ALERT) {
+            Level1AlertScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
