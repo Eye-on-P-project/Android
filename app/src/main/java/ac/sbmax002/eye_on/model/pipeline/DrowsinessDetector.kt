@@ -12,19 +12,26 @@ import ac.sbmax002.eye_on.DTO.DrowsinessState
 class DrowsinessDetector(
     private val baseEarThreshold: Float = 0.25f,    // baseline 없을 때 임시로 쓸 기본값
     private val closedRatio: Float = 0.7f,          // baselineEAR * closedRatio 보다 작으면 감김으로 판단
-    private val drowsyFrameThreshold: Int = 15,     // 연속 N프레임 감기면 "졸음"
-    private val sleepingFrameThreshold: Int = 60,   // 연속 N프레임 감기면 "잔다"
-    private val recoverFrameThreshold: Int = 15,    // 연속 N프레임 뜨면 "평상시" 복귀
-    private val baselineSmoothing: Float = 0.01f,   // baselineEAR 업데이트 속도 (0~1, 작을수록 천천히)
-    private val warmupFrameThreshold: Int = 60      // 워밍업 기간 프레임 수
+    // 시간 기준 임계값 (ms 단위)
+    private val drowsyDurationMs: Long = 1_000L,     // 연속 N ms 감기면 "졸음"
+    private val sleepingDurationMs: Long = 3_000L,   // 연속 N ms 감기면 "잔다"
+    private val recoverDurationMs: Long = 1_000L,    // 연속 N ms 뜨면 "평상시" 복귀
+
+    // baseline 학습 속도
+    private val baselineSmoothing: Float = 0.01f,    // 일반 구간에서 baseline 업데이트 속도 (0~1, 작을수록 천천히)
+    private val warmupDurationMs: Long = 2_000L,     // 워밍업 기간 (ms)
+    private val warmupBaselineSmoothing: Float = 0.1f // 워밍업 구간에서만 사용하는 더 큰 학습률
 ) {
 
     // 세션 동안의 "눈 뜬 상태" EAR 평균 (적응형)
     private var baselineEar: Float = 0f
 
-    private var closedFrameCount: Int = 0
-    private var openFrameCount: Int = 0
-    private var processedFrameCount: Int = 0
+    // 시간 누적용 상태 (ms 단위)
+    private var lastTimestampMs: Long? = null
+    private var warmupElapsedMs: Long = 0L
+
+    private var closedDurationMs: Long = 0L
+    private var openDurationMs: Long = 0L
     private var state: DrowsinessState = DrowsinessState.NORMAL
 
     /**
@@ -32,7 +39,7 @@ class DrowsinessDetector(
      * - 워밍업 구간에서는 baseline만 학습하고 항상 NORMAL 유지
      * - 워밍업 이후부터 졸음 상태(NORMAL/DROWSY/SLEEPING)를 판정
      */
-    fun update(leftEar: Float?, rightEar: Float?): DrowsinessState {
+    fun update(leftEar: Float?, rightEar: Float?, frameTimestampMs: Long): DrowsinessState {
         // 1) 현재 프레임 EAR 평균 (존재하는 값만 평균)
         val ears = listOfNotNull(leftEar, rightEar)
         val avgEar: Float? = if (ears.isNotEmpty()) {
@@ -46,53 +53,66 @@ class DrowsinessDetector(
         val rightClosedNow = isEyeClosed(rightEar)
         val bothClosedNow = leftClosedNow && rightClosedNow
 
-        // 3) 처리된 프레임 카운트 (EAR가 아예 없으면 센다고 보지 않음)
-        if (avgEar != null && avgEar > 0f) {
-            processedFrameCount++
+        // 3) 시간 경과 계산 (이전 timestamp와의 차이)
+        val prevTs = lastTimestampMs
+        val deltaMs = if (prevTs != null) {
+            val raw = frameTimestampMs - prevTs
+            if (raw < 0L) 0L else raw
+        } else {
+            0L
+        }
+        lastTimestampMs = frameTimestampMs
+
+        val hasValidEar = avgEar != null && avgEar > 0f
+
+        // 4) 유효 EAR 가 있는 프레임에서만 워밍업 시간 누적
+        if (hasValidEar) {
+            warmupElapsedMs += deltaMs
         }
 
-        // 4) 눈 뜬 상태에서만 baselineEAR를 천천히 업데이트
-        if (!bothClosedNow && avgEar != null && avgEar > 0f) {
+        val inWarmup = warmupElapsedMs < warmupDurationMs
+
+        // 5) 눈 뜬 상태에서만 baselineEAR 업데이트
+        if (!bothClosedNow && hasValidEar) {
             baselineEar = if (baselineEar == 0f) {
-                avgEar               // 첫 값은 그대로 사용
+                avgEar!!
             } else {
-                // 지수 이동 평균 형태 (과거 baseline을 조금 남기고 최신 avgEar를 조금 섞음)
-                baselineEar * (1f - baselineSmoothing) + avgEar * baselineSmoothing
+                // 🔹 워밍업 구간에서는 더 큰 학습률, 이후에는 작은 학습률 사용
+                val alpha = if (inWarmup) warmupBaselineSmoothing else baselineSmoothing
+                baselineEar * (1f - alpha) + avgEar!! * alpha
             }
         }
 
-        // 5) 워밍업 구간인지 체크
-        val inWarmup = processedFrameCount < warmupFrameThreshold
-
+        // 6) 워밍업 구간 동안에는 상태를 무조건 NORMAL 로 고정
         if (inWarmup) {
-            // 워밍업 동안에는 상태를 무조건 NORMAL 로 고정
-            //    (이때 baselineEar 만 학습되는 느낌)
-            closedFrameCount = 0
-            openFrameCount = 0
+            closedDurationMs = 0L
+            openDurationMs = 0L
             state = DrowsinessState.NORMAL
             return state
         }
 
-        // 6) 워밍업 이후부터는 본격적으로 감김/뜸 프레임 카운트 관리
-        if (bothClosedNow) {
-            closedFrameCount++
-            openFrameCount = 0
-        } else {
-            openFrameCount++
-            closedFrameCount = 0
+        // 7) 워밍업 이후부터는 본격적으로 감김/뜸 "시간" 누적
+        if (hasValidEar) {
+            if (bothClosedNow) {
+                closedDurationMs += deltaMs
+                openDurationMs = 0L
+            } else {
+                openDurationMs += deltaMs
+                closedDurationMs = 0L
+            }
         }
 
-        // 7) 감긴 프레임 수에 따라 졸음/수면 상태 진입
+        // 8) 감긴 시간에 따라 졸음/수면 상태 진입
         state = when {
-            bothClosedNow && closedFrameCount >= sleepingFrameThreshold ->
+            bothClosedNow && closedDurationMs >= sleepingDurationMs ->
                 DrowsinessState.SLEEPING
-            bothClosedNow && closedFrameCount >= drowsyFrameThreshold ->
+            bothClosedNow && closedDurationMs >= drowsyDurationMs ->
                 DrowsinessState.DROWSY
             else -> state   // 그 외에는 이전 상태 유지
         }
 
-        // 8) 눈 뜬 상태가 일정 프레임 이상 유지되면 무조건 NORMAL 복귀
-        if (!bothClosedNow && openFrameCount >= recoverFrameThreshold) {
+        // 9) 눈 뜬 상태가 일정 시간 이상 유지되면 NORMAL 복귀
+        if (!bothClosedNow && openDurationMs >= recoverDurationMs) {
             state = DrowsinessState.NORMAL
         }
 
@@ -120,9 +140,10 @@ class DrowsinessDetector(
 
     fun reset() {
         baselineEar = 0f
-        closedFrameCount = 0
-        openFrameCount = 0
-        processedFrameCount = 0
+        lastTimestampMs = null
+        warmupElapsedMs = 0L
+        closedDurationMs = 0L
+        openDurationMs = 0L
         state = DrowsinessState.NORMAL
     }
 }
