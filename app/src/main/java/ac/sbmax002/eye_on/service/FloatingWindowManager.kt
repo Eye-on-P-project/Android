@@ -11,11 +11,18 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.util.Log
 import androidx.core.content.ContextCompat
 import ac.sbmax002.eye_on.MainActivity
 import ac.sbmax002.eye_on.DTO.DrowsinessState
+import ac.sbmax002.eye_on.repository.SettingsRepository
+import ac.sbmax002.eye_on.ui.floating.EyeIconView
+import ac.sbmax002.eye_on.ui.settings.FloatingIconSize
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * 플로팅 윈도우를 관리하는 매니저
@@ -24,15 +31,38 @@ import ac.sbmax002.eye_on.DTO.DrowsinessState
  * - 드래그 가능
  * - 플로팅 아이콘 상태 업데이트 (졸음 상태에 따라)
  */
-class FloatingWindowManager(private val context: Context) {
+class FloatingWindowManager(
+    private val context: Context,
+    private val settingsRepository: SettingsRepository? = null
+) {
     
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
-    private var iconImageView: ImageView? = null
+    private var eyeIconView: EyeIconView? = null
     private var drowsinessState: DrowsinessState = DrowsinessState.NORMAL
+    private var isFaceDetected: Boolean = false
+    private var iconSizeDp: Int = ICON_SIZE_DP
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     init {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        
+        // 설정값으로부터 아이콘 크기 가져오기 (비동기)
+        if (settingsRepository != null) {
+            coroutineScope.launch {
+                try {
+                    val iconSize = settingsRepository.floatingIconSize.first()
+                    iconSizeDp = when (iconSize) {
+                        FloatingIconSize.SMALL -> 48
+                        FloatingIconSize.MEDIUM -> 56
+                        FloatingIconSize.LARGE -> 64
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to get icon size from settings", e)
+                    iconSizeDp = ICON_SIZE_DP
+                }
+            }
+        }
     }
     
     /**
@@ -72,11 +102,14 @@ class FloatingWindowManager(private val context: Context) {
      * 플로팅 아이콘 뷰 생성
      */
     private fun createFloatingIconView(): View {
+        // 설정값으로부터 아이콘 크기 가져오기
+        val iconSizeDp = getIconSizeFromSettings()
+        
         // 원형 배경과 아이콘을 포함하는 FrameLayout 생성
         val iconView = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
-                ICON_SIZE_DP.dpToPx(context),
-                ICON_SIZE_DP.dpToPx(context)
+                iconSizeDp.dpToPx(context),
+                iconSizeDp.dpToPx(context)
             )
             
             // 원형 배경 설정
@@ -85,25 +118,30 @@ class FloatingWindowManager(private val context: Context) {
                 setColor(getStateColor(drowsinessState))
             }
             
-            // 아이콘을 넣을 ImageView 생성 (중앙 정렬)
-            iconImageView = ImageView(context).apply {
+            // 눈 모양 아이콘을 넣을 EyeIconView 생성 (중앙 정렬)
+            eyeIconView = EyeIconView(context).apply {
                 layoutParams = FrameLayout.LayoutParams(
-                    ICON_SIZE_DP.dpToPx(context) / 2, // 아이콘 크기는 배경의 절반
-                    ICON_SIZE_DP.dpToPx(context) / 2
+                    iconSizeDp.dpToPx(context) * 2 / 3, // 아이콘 크기는 배경의 2/3
+                    iconSizeDp.dpToPx(context) * 2 / 3
                 ).apply {
                     gravity = Gravity.CENTER
                 }
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
-                // TODO: 여기에 아이콘 리소스 넣을 수 ㅣㅇㅆ음
-                // setImageResource(R.drawable.ic_eye_on)
+                updateState(isFaceDetected, drowsinessState)
             }
-            addView(iconImageView)
+            addView(eyeIconView)
             
             // 드래그와 클릭을 모두 처리하는 TouchListener 사용
             setOnTouchListener(FloatingIconTouchListener())
         }
         
         return iconView
+    }
+    
+    /**
+     * 설정값으로부터 아이콘 크기 가져오기
+     */
+    private fun getIconSizeFromSettings(): Int {
+        return iconSizeDp
     }
     
     /**
@@ -128,9 +166,11 @@ class FloatingWindowManager(private val context: Context) {
             WindowManager.LayoutParams.TYPE_PHONE
         }
         
+        val iconSizeDp = getIconSizeFromSettings()
+        
         return WindowManager.LayoutParams(
-            ICON_SIZE_DP.dpToPx(context),
-            ICON_SIZE_DP.dpToPx(context),
+            iconSizeDp.dpToPx(context),
+            iconSizeDp.dpToPx(context),
             type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
@@ -239,10 +279,11 @@ class FloatingWindowManager(private val context: Context) {
     }
     
     /**
-     * 플로팅 아이콘 상태 업데이트 (졸음 상태에 따라)
+     * 플로팅 아이콘 상태 업데이트 (얼굴 감지 여부와 졸음 상태에 따라)
      */
-    fun updateDrowsinessState(state: DrowsinessState) {
-        Log.d(TAG, "Updating drowsiness state: $state")
+    fun updateState(faceDetected: Boolean, state: DrowsinessState) {
+        Log.d(TAG, "Updating state: faceDetected=$faceDetected, drowsinessState=$state")
+        this.isFaceDetected = faceDetected
         this.drowsinessState = state
         
         // UI 업데이트는 반드시 메인 스레드에서 실행되어야 함
@@ -253,10 +294,18 @@ class FloatingWindowManager(private val context: Context) {
                     shape = android.graphics.drawable.GradientDrawable.OVAL
                     setColor(getStateColor(state))
                 }
-                // TODO: 상태에 따라 아이콘도 변경 가능
-                // iconImageView?.setImageResource(getStateIcon(state))
+                // 눈 모양 아이콘 업데이트
+                eyeIconView?.updateState(faceDetected, state)
             }
         }
+    }
+    
+    /**
+     * 플로팅 아이콘 상태 업데이트 (졸음 상태에 따라) - 하위 호환성을 위한 메서드
+     */
+    @Deprecated("Use updateState(faceDetected, state) instead", ReplaceWith("updateState(false, state)"))
+    fun updateDrowsinessState(state: DrowsinessState) {
+        updateState(isFaceDetected, state)
     }
     
     
