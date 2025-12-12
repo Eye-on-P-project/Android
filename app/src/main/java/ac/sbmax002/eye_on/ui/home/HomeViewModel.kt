@@ -166,6 +166,7 @@ class HomeViewModel(
         val sessionId = currentSessionId ?: return
         if (level <= 0) return
 
+        incrementDrowsinessCount(level)
         // ms → 초 단위 문자열로 변환 (예: 1250ms -> "1.3s")
         val durationSeconds = durationMs / 1000f
         val durationStr = String.format("%.1fs", durationSeconds)
@@ -192,16 +193,23 @@ class HomeViewModel(
     // 내부적으로 카운트 증가 및 DB 저장
     private fun incrementDrowsinessCount(level: Int) {
         val sessionId = currentSessionId ?: return // 세션 없으면 무시
+            if (level <= 0) return
+
+            // 1. UI 카운트 증가
+            _uiState.value = if (level == 2) {
+                // Level 2 (수면)
+                _uiState.value.copy(
+                    sleepDetectionCount = _uiState.value.sleepDetectionCount + 1
+                )
+            } else {
+                // Level 1 (졸음)
+                _uiState.value.copy(
+                    drowsinessDetectionCount = _uiState.value.drowsinessDetectionCount + 1
+                )
+            }
+
 
         viewModelScope.launch {
-            // 1. UI 업데이트 우영님 요청 사항 - 주석 처리
-           /*
-           _uiState.value = _uiState.value.copy(
-                drowsinessDetectionCount = _uiState.value.drowsinessDetectionCount + 1
-            )
-            */
-
-
 // 2. DB에 이벤트 저장 (Level에 따라 메시지 구분)
             val message = if (level == 2) "Sleep Detected" else "Drowsiness Detected"
 

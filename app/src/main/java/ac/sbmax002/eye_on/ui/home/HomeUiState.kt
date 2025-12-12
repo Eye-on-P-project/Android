@@ -7,6 +7,7 @@ data class HomeUiState(
     val monitoringStartTime: Long = 0L,
     val lastSessionDuration: Long = 0L,
     val drowsinessDetectionCount: Int = 0,
+    val sleepDetectionCount: Int = 0,
     val appMode: AppMode = AppMode.DRIVING,
     val cameraInitialized: Boolean = false
 )
