@@ -105,6 +105,7 @@ class MonitoringService : Service(), PipelineListener {
                 settingsRepository = SettingsRepository(applicationContext)
                 val initialDuration = settingsRepository?.drowsinessSensitivity?.first()
                     ?.drowsyDurationMs ?: DrowsinessSensitivity.LOW.drowsyDurationMs
+                Log.d(TAG, "Drowsiness sensitivity initial ms=$initialDuration")
                 
                 // FaceProcessingPipeline 초기화
                 faceProcessingPipeline = FaceProcessingPipeline(
@@ -114,6 +115,7 @@ class MonitoringService : Service(), PipelineListener {
                 )
                 settingsJob = serviceScope.launch {
                     settingsRepository?.drowsinessSensitivity?.collectLatest { sensitivity ->
+                        Log.d(TAG, "Drowsiness sensitivity changed to ${sensitivity.name} (${sensitivity.drowsyDurationMs} ms)")
                         faceProcessingPipeline?.updateDrowsyDuration(sensitivity.drowsyDurationMs)
                     }
                 }

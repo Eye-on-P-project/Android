@@ -53,6 +53,7 @@ class FaceProcessingPipeline(
     }
 
     fun updateDrowsyDuration(newDurationMs: Long) {
+        Log.d("FacePipeline", "updateDrowsyDuration=$newDurationMs")
         drowsinessDetector.updateDrowsyDuration(newDurationMs)
     }
 
