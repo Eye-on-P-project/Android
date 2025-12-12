@@ -18,7 +18,7 @@ class DrowsinessDetector(
     private val recoverDurationMs: Long = 1_000L,    // 연속 N ms 뜨면 "평상시" 복귀
 
     // baseline 학습 속도
-    private val baselineSmoothing: Float = 0.0001f,    // 일반 구간에서 baseline 업데이트 속도 (0~1, 작을수록 천천히)
+    private val baselineSmoothing: Float = 0.01f,    // 일반 구간에서 baseline 업데이트 속도 (0~1, 작을수록 천천히)
     private val warmupDurationMs: Long = 2_000L,     // 워밍업 기간 (ms)
     private val warmupBaselineSmoothing: Float = 0.1f // 워밍업 구간에서만 사용하는 더 큰 학습률
 ) {
