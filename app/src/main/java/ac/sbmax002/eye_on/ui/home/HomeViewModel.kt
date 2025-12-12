@@ -12,6 +12,10 @@ import ac.sbmax002.eye_on.repository.AppStateRepository
 import ac.sbmax002.eye_on.repository.StatisticsRepository
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult // 파이프라인 결과 클래스 import 필요
 import ac.sbmax002.eye_on.DTO.DrowsinessState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import ac.sbmax002.eye_on.model.statistics.SessionEvent
 
 class HomeViewModel(
     private val repository: StatisticsRepository // DB 처리를 위해 주입받음
@@ -65,7 +69,8 @@ class HomeViewModel(
             _uiState.value = _uiState.value.copy(
                 isMonitoring = true,
                 monitoringStartTime = System.currentTimeMillis(),
-                drowsinessDetectionCount = 0 // 카운트 초기화
+                drowsinessDetectionCount = 0, // 카운트 초기화
+                sessionEvents = emptyList()
             )
         }
     }
@@ -107,7 +112,6 @@ class HomeViewModel(
     }
 
     // 3. 파이프라인 결과 처리 (졸음 감지 시 DB 저장)
-    // 기존의 incrementDrowsinessCount 대신 이 함수를 파이프라인에서 호출하는 것을 추천합니다.
     fun onPipelineResult(result: PipelineResult) {
         // UI 업데이트: 얼굴 감지 상태 등
         updateFaceDetection(result.isFaceDetected)
@@ -166,12 +170,37 @@ class HomeViewModel(
         val sessionId = currentSessionId ?: return
         if (level <= 0) return
 
-        incrementDrowsinessCount(level)
+        _uiState.value = if (level == 2) {
+            _uiState.value.copy(
+                sleepDetectionCount = _uiState.value.sleepDetectionCount + 1
+            )
+        } else {
+            _uiState.value.copy(
+                drowsinessDetectionCount = _uiState.value.drowsinessDetectionCount + 1
+            )
+        }
         // ms → 초 단위 문자열로 변환 (예: 1250ms -> "1.3s")
         val durationSeconds = durationMs / 1000f
         val durationStr = String.format("%.1fs", durationSeconds)
 
         val message = if (level == 2) "Sleep Detected" else "Drowsiness Detected"
+
+        val currentTimeMs = System.currentTimeMillis()
+        val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val timeStr = timeFormatter.format(Date(currentTimeMs))
+
+        val newEvent = SessionEvent(
+            sessionId = sessionId,
+            time = timeStr,
+            message = message,
+            duration = durationStr,
+            level = level
+        )
+
+        val currentList = _uiState.value.sessionEvents
+        _uiState.value = _uiState.value.copy(
+            sessionEvents = currentList + newEvent
+        )
 
         Log.d(
             "HomeViewModel",

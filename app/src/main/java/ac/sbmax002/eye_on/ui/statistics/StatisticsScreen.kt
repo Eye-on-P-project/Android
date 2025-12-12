@@ -27,11 +27,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ac.sbmax002.eye_on.model.statistics.DrivingSession
+import ac.sbmax002.eye_on.model.statistics.SessionEvent
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.home.AppMode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+
 
 @Composable
 fun StatisticsScreen(
@@ -135,14 +138,20 @@ fun CurrentSessionView(
 
     // 운전 모드는 파란색(Blue), 스터디 모드는 주황색(Orange) 테마 사용
     val themeColor = if (isDriving) Color(0xFF2196F3) else Color(0xFFFF9800)
+    val events = homeUiState.sessionEvents
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+        // verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             // 시간 카드
             DashboardCard(title = mainLabel, icon = Icons.Outlined.AccessTime, iconTint = themeColor) {
                 Text("시작 시간", color = Color.Gray, fontSize = 14.sp)
@@ -170,8 +179,22 @@ fun CurrentSessionView(
 
             // 이벤트 타임라인
             DashboardCard(title = "이벤트 타임라인", icon = Icons.Default.Warning, iconTint = themeColor) {
-                Text("실시간 이벤트 대기 중...", color = Color.Gray, fontSize = 14.sp)
+                if (events.isEmpty()) {
+                    Text("실시간 이벤트 대기 중...", color = Color.Gray, fontSize = 14.sp)
+                } else {
+                    // DetailScreen.kt에 있는 TimelineItem 재사용
+                    // Column으로 감싸서 리스트 표시
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        events.forEachIndexed { index, event ->
+                            TimelineItem(
+                                event = event,
+                                isLast = index == events.lastIndex
+                            )
+                        }
+                    }
+                }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         Button(
