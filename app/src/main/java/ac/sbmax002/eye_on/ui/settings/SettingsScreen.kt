@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 /**
  * 설정 화면
@@ -30,7 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = viewModel(),
+    viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToLevel1Alert: () -> Unit = {}
 ) {
@@ -109,12 +109,6 @@ fun SettingsScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                SettingToggleItem(
-                    label = "다크 모드",
-                    checked = uiState.darkModeEnabled,
-                    onCheckedChange = { viewModel.toggleDarkMode() }
-                )
             }
         }
     }
