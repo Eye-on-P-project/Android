@@ -13,9 +13,12 @@ import androidx.camera.core.ImageProxy
 class FaceProcessingPipeline(
     context: Context,
     private val listener: PipelineListener,
+    private val drowsyDurationMs: Long = 1_000L,
     private val roiExtractor: RoiExtractor = RoiExtractor(),
     private val earCalculator: EarCalculator = EarCalculator(),
-    private val drowsinessDetector: DrowsinessDetector = DrowsinessDetector()
+    private val drowsinessDetector: DrowsinessDetector = DrowsinessDetector(
+        drowsyDurationMs = drowsyDurationMs
+    )
 ) : FaceLandmarkerHelper.LandmarkerListener {
 
     // MediaPipe 얼굴 랜드마커 헬퍼
@@ -47,6 +50,11 @@ class FaceProcessingPipeline(
 
     fun reset() {
         drowsinessDetector.reset()
+    }
+
+    fun updateDrowsyDuration(newDurationMs: Long) {
+        Log.d("FacePipeline", "updateDrowsyDuration=$newDurationMs")
+        drowsinessDetector.updateDrowsyDuration(newDurationMs)
     }
 
     override fun onError(error: String, errorCode: Int) {

@@ -8,6 +8,9 @@ data class SettingsUiState(
     val level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION,
     val level1Volume: Int = 70, // 0-100
     
+    // 졸음 감지 민감도
+    val drowsinessSensitivity: DrowsinessSensitivity = DrowsinessSensitivity.LOW,
+    
     // 수면 경고 2단계 설정
     val level2AlarmSound: AlarmSound = AlarmSound.SIREN,
     val level2Volume: Int = 100, // 0-100
@@ -40,6 +43,17 @@ enum class AlarmSound(
     
     @Deprecated("Use SIREN instead", ReplaceWith("SIREN"))
     SIREN_OLD("사이렌", "siren_alarm")
+}
+
+/**
+ * 졸음 감지 민감도
+ */
+enum class DrowsinessSensitivity(
+    val displayName: String,
+    val drowsyDurationMs: Long
+) {
+    HIGH("높음", 500L),
+    LOW("낮음", 700L)
 }
 
 /**

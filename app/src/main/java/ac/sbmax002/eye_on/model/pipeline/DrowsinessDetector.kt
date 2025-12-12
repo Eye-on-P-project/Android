@@ -10,10 +10,10 @@ import ac.sbmax002.eye_on.DTO.DrowsinessState
  *   그 이후부터 baseline을 기준으로 졸음/수면을 판정한다.
  */
 class DrowsinessDetector(
-    private val baseEarThreshold: Float = 0.25f,    // baseline 없을 때 임시로 쓸 기본값
+    private val baseEarThreshold: Float = 0.12f,    // baseline 없을 때 임시로 쓸 기본값
     private val closedRatio: Float = 0.7f,          // baselineEAR * closedRatio 보다 작으면 감김으로 판단
     // 시간 기준 임계값 (ms 단위)
-    private val drowsyDurationMs: Long = 1_000L,     // 연속 N ms 감기면 "졸음"
+    private var drowsyDurationMs: Long = 1_000L,     // 연속 N ms 감기면 "졸음"
     private val sleepingDurationMs: Long = 3_000L,   // 연속 N ms 감기면 "잔다"
     private val recoverDurationMs: Long = 1_000L,    // 연속 N ms 뜨면 "평상시" 복귀
 
@@ -117,6 +117,10 @@ class DrowsinessDetector(
         }
 
         return state
+    }
+
+    fun updateDrowsyDuration(durationMs: Long) {
+        drowsyDurationMs = durationMs.coerceAtLeast(0L)
     }
 
     /**
