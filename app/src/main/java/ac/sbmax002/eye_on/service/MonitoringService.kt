@@ -16,6 +16,7 @@ import ac.sbmax002.eye_on.model.pipeline.FaceProcessingPipeline
 import ac.sbmax002.eye_on.model.pipeline.PipelineListener
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult
 import ac.sbmax002.eye_on.DTO.DrowsinessState
+import ac.sbmax002.eye_on.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +36,7 @@ class MonitoringService : Service(), PipelineListener {
     private var cameraManager: ServiceCameraManager? = null
     private var faceProcessingPipeline: FaceProcessingPipeline? = null
     private var floatingWindowManager: FloatingWindowManager? = null
+    private var settingsRepository: SettingsRepository? = null
     
     private var isMonitoringStarted = false
 
@@ -94,6 +96,9 @@ class MonitoringService : Service(), PipelineListener {
         
         serviceScope.launch {
             try {
+                // SettingsRepository 초기화 (Hilt 없이 직접 생성)
+                settingsRepository = SettingsRepository(applicationContext)
+                
                 // FaceProcessingPipeline 초기화
                 faceProcessingPipeline = FaceProcessingPipeline(
                     context = applicationContext,
@@ -113,7 +118,7 @@ class MonitoringService : Service(), PipelineListener {
                 cameraManager?.startCamera()
                 
                 // 플로팅 윈도우 매니저 초기화 및 표시
-                floatingWindowManager = FloatingWindowManager(applicationContext)
+                floatingWindowManager = FloatingWindowManager(applicationContext, settingsRepository)
                 floatingWindowManager?.showFloatingWindow()
                 
                 Log.d(TAG, "Monitoring started successfully")
@@ -198,8 +203,8 @@ class MonitoringService : Service(), PipelineListener {
     
     override fun onPipelineResult(result: PipelineResult) {
         Log.d(TAG, "Pipeline result: drowsinessState=${result.drowsinessState}, faceDetected=${result.isFaceDetected}")
-        // 졸음 상태에 따른 플로팅 아이콘 업데이트
-        floatingWindowManager?.updateDrowsinessState(result.drowsinessState)
+        // 얼굴 감지 여부와 졸음 상태에 따른 플로팅 아이콘 업데이트
+        floatingWindowManager?.updateState(result.isFaceDetected, result.drowsinessState)
 
         // Activity/HomeViewModel 쪽으로도 결과 전달
         pipelineResultListener?.invoke(result)
