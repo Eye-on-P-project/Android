@@ -5,6 +5,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import ac.sbmax002.eye_on.service.MonitoringService
@@ -154,19 +156,14 @@ private fun HomeTopBar(
                     // 로고 아이콘 박스
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color(0xFF007AFF),
-                                        Color(0xFF0051D5)
-                                    )
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            ),
+                            .size(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        // 로고 아이콘 들어갈 자리
+                        Image(
+                            painter = painterResource(id = ac.sbmax002.eye_on.R.drawable.logo),
+                            contentDescription = "Logo",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                     Text(
                         text = "Eye:on",
