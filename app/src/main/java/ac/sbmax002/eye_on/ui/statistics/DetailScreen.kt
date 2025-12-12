@@ -59,14 +59,14 @@ fun DetailScreen(
                 Text(
                     text = session.dateStr,
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${session.time} • ${session.durationStr}",
+                    text = "${session.time}부터 • ${session.durationStr} 동안",
                     color = Color.Gray,
-                    fontSize = 14.sp
+                    fontSize = 20.sp
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -75,7 +75,7 @@ fun DetailScreen(
                 Text(
                     text = "Alert Timeline",
                     color = Color.Gray,
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -141,7 +141,7 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
                         .width(2.dp)
                         .fillMaxHeight()
                         .padding(top = 16.dp)
-                        .background(Color(0xFF333333))
+                        .background(Color(0xFF414141))
                 )
             }
 
@@ -162,7 +162,7 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF414141)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
