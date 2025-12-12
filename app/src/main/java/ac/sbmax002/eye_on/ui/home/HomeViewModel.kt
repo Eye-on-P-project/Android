@@ -117,6 +117,7 @@ class HomeViewModel(
         updateFaceDetection(result.isFaceDetected)
 
         val state = result.drowsinessState
+        _uiState.value = _uiState.value.copy(currentDrowsinessState = state)
 
         // 지금 프레임이 "경고 상태"인지 여부 (DROWSY 또는 SLEEPING)
         val isAlertNow =
@@ -222,24 +223,24 @@ class HomeViewModel(
     // 내부적으로 카운트 증가 및 DB 저장
     private fun incrementDrowsinessCount(level: Int) {
         val sessionId = currentSessionId ?: return // 세션 없으면 무시
-            if (level <= 0) return
+        if (level <= 0) return
 
-            // 1. UI 카운트 증가
-            _uiState.value = if (level == 2) {
-                // Level 2 (수면)
-                _uiState.value.copy(
-                    sleepDetectionCount = _uiState.value.sleepDetectionCount + 1
-                )
-            } else {
-                // Level 1 (졸음)
-                _uiState.value.copy(
-                    drowsinessDetectionCount = _uiState.value.drowsinessDetectionCount + 1
-                )
-            }
+        // 1. UI 카운트 증가
+        _uiState.value = if (level == 2) {
+            // Level 2 (수면)
+            _uiState.value.copy(
+                sleepDetectionCount = _uiState.value.sleepDetectionCount + 1
+            )
+        } else {
+            // Level 1 (졸음)
+            _uiState.value.copy(
+                drowsinessDetectionCount = _uiState.value.drowsinessDetectionCount + 1
+            )
+        }
 
 
         viewModelScope.launch {
-// 2. DB에 이벤트 저장 (Level에 따라 메시지 구분)
+            // 2. DB에 이벤트 저장 (Level에 따라 메시지 구분)
             val message = if (level == 2) "Sleep Detected" else "Drowsiness Detected"
 
             repository.saveEvent(

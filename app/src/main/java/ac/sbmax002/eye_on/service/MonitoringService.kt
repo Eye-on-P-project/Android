@@ -17,6 +17,7 @@ import ac.sbmax002.eye_on.model.pipeline.PipelineListener
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult
 import ac.sbmax002.eye_on.DTO.DrowsinessState
 import ac.sbmax002.eye_on.repository.SettingsRepository
+import ac.sbmax002.eye_on.ui.settings.AlarmSound
 import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 
 /**
  * 모니터링을 관리하는 Foreground Service
@@ -42,8 +44,14 @@ class MonitoringService : Service(), PipelineListener {
     private var floatingWindowManager: FloatingWindowManager? = null
     private var settingsRepository: SettingsRepository? = null
     private var settingsJob: Job? = null
+    private var alarmPlayer: AlarmPlayer? = null
     
     private var isMonitoringStarted = false
+    private var currentAlarmLevel: AlarmLevel = AlarmLevel.NONE
+    private var level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION
+    private var level2AlarmSound: AlarmSound = AlarmSound.SIREN
+    private var level1Volume: Int = 70
+    private var level2Volume: Int = 100
 
     // 파이프라인 결과를 Activity/HomeViewModel로 전달하기 위한 콜백
     private var pipelineResultListener: ((PipelineResult) -> Unit)? = null
@@ -82,6 +90,9 @@ class MonitoringService : Service(), PipelineListener {
                 stopMonitoring()
                 stopSelf()
             }
+            ACTION_ACK_WAKE -> {
+                acknowledgeWake()
+            }
         }
         
         return START_STICKY
@@ -103,8 +114,19 @@ class MonitoringService : Service(), PipelineListener {
             try {
                 // SettingsRepository 초기화 (Hilt 없이 직접 생성)
                 settingsRepository = SettingsRepository(applicationContext)
-                val initialDuration = settingsRepository?.drowsinessSensitivity?.first()
-                    ?.drowsyDurationMs ?: DrowsinessSensitivity.LOW.drowsyDurationMs
+                val settingsRepo = settingsRepository!!
+                val initialSensitivity = settingsRepo.drowsinessSensitivity.first()
+                val initialLevel1Sound = settingsRepo.level1AlarmSound.first()
+                val initialLevel2Sound = settingsRepo.level2AlarmSound.first()
+                val initialLevel1Volume = settingsRepo.level1Volume.first()
+                val initialLevel2Volume = settingsRepo.level2Volume.first()
+
+                level1AlarmSound = initialLevel1Sound
+                level2AlarmSound = initialLevel2Sound
+                level1Volume = initialLevel1Volume
+                level2Volume = initialLevel2Volume
+
+                val initialDuration = initialSensitivity.drowsyDurationMs
                 Log.d(TAG, "Drowsiness sensitivity initial ms=$initialDuration")
                 
                 // FaceProcessingPipeline 초기화
@@ -113,10 +135,32 @@ class MonitoringService : Service(), PipelineListener {
                     listener = this@MonitoringService,
                     drowsyDurationMs = initialDuration
                 )
+                alarmPlayer = AlarmPlayer(applicationContext)
                 settingsJob = serviceScope.launch {
-                    settingsRepository?.drowsinessSensitivity?.collectLatest { sensitivity ->
-                        Log.d(TAG, "Drowsiness sensitivity changed to ${sensitivity.name} (${sensitivity.drowsyDurationMs} ms)")
-                        faceProcessingPipeline?.updateDrowsyDuration(sensitivity.drowsyDurationMs)
+                    settingsRepo.let { repo ->
+                        combine(
+                            repo.drowsinessSensitivity,
+                            repo.level1AlarmSound,
+                            repo.level1Volume,
+                            repo.level2AlarmSound,
+                            repo.level2Volume
+                        ) { sensitivity, l1Sound, l1VolumeValue, l2Sound, l2VolumeValue ->
+                            SettingsSnapshot(
+                                sensitivity = sensitivity,
+                                level1Sound = l1Sound,
+                                level1Volume = l1VolumeValue,
+                                level2Sound = l2Sound,
+                                level2Volume = l2VolumeValue
+                            )
+                        }.collectLatest { snapshot ->
+                            Log.d(TAG, "Settings updated: sensitivity=${snapshot.sensitivity.name}, l1Sound=${snapshot.level1Sound.name}, l2Sound=${snapshot.level2Sound.name}")
+                            faceProcessingPipeline?.updateDrowsyDuration(snapshot.sensitivity.drowsyDurationMs)
+                            level1AlarmSound = snapshot.level1Sound
+                            level2AlarmSound = snapshot.level2Sound
+                            level1Volume = snapshot.level1Volume
+                            level2Volume = snapshot.level2Volume
+                            refreshAlarmIfNeeded()
+                        }
                     }
                 }
                 
@@ -137,7 +181,11 @@ class MonitoringService : Service(), PipelineListener {
                 cameraManager?.startCamera()
                 
                 // 플로팅 윈도우 매니저 초기화 및 표시
-                floatingWindowManager = FloatingWindowManager(applicationContext, settingsRepository)
+                floatingWindowManager = FloatingWindowManager(
+                    context = applicationContext,
+                    settingsRepository = settingsRepository,
+                    onWakeUpClicked = { acknowledgeWake() }
+                )
                 floatingWindowManager?.showFloatingWindow()
                 
                 Log.d(TAG, "Monitoring started successfully")
@@ -162,6 +210,8 @@ class MonitoringService : Service(), PipelineListener {
         faceProcessingPipeline = null
         settingsJob?.cancel()
         settingsJob = null
+        stopAlarm()
+        alarmPlayer = null
         
         // 플로팅 윈도우 제거
         floatingWindowManager?.removeFloatingWindow()
@@ -224,13 +274,17 @@ class MonitoringService : Service(), PipelineListener {
     
     override fun onPipelineResult(result: PipelineResult) {
         Log.d(TAG, "Pipeline result: drowsinessState=${result.drowsinessState}, faceDetected=${result.isFaceDetected}")
+
         // 얼굴 감지 여부와 졸음 상태에 따른 플로팅 아이콘 업데이트
-        floatingWindowManager?.updateState(result.isFaceDetected, result.drowsinessState)
+        floatingWindowManager?.updateState(
+            result.isFaceDetected,
+            result.drowsinessState
+        )
 
         // Activity/HomeViewModel 쪽으로도 결과 전달
         pipelineResultListener?.invoke(result)
 
-        // TODO: 사운드 재생 (나중에 구현)
+        handleAlarm(result)
     }
     
     override fun onPipelineError(message: String) {
@@ -261,6 +315,79 @@ class MonitoringService : Service(), PipelineListener {
     fun showFloatingIcon() {
         floatingWindowManager?.showFloatingWindowIfExists()
     }
+
+    private fun handleAlarm(result: PipelineResult) {
+        val targetLevel = when {
+            result.isFaceDetected && result.drowsinessState == DrowsinessState.NORMAL -> AlarmLevel.NONE
+            result.drowsinessState == DrowsinessState.SLEEPING -> AlarmLevel.LEVEL2
+            result.drowsinessState == DrowsinessState.DROWSY -> AlarmLevel.LEVEL1
+            currentAlarmLevel != AlarmLevel.NONE -> currentAlarmLevel // 얼굴 미검출 시에도 기존 알람 유지
+            else -> AlarmLevel.NONE
+        }
+
+        if (targetLevel == AlarmLevel.NONE) {
+            stopAlarm()
+            return
+        }
+
+        if (targetLevel != currentAlarmLevel) {
+            when (targetLevel) {
+                AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
+                AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
+                else -> {}
+            }
+            currentAlarmLevel = targetLevel
+            return
+        }
+
+        // 같은 단계가 유지되지만 플레이어가 멈췄다면 재개
+        if (alarmPlayer?.isPlaying() != true) {
+            when (targetLevel) {
+                AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
+                AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
+                else -> {}
+            }
+        }
+    }
+
+    private fun refreshAlarmIfNeeded() {
+        when (currentAlarmLevel) {
+            AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
+            AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
+            else -> {}
+        }
+    }
+
+    private fun stopAlarm() {
+        alarmPlayer?.stop()
+        currentAlarmLevel = AlarmLevel.NONE
+    }
+
+    private fun acknowledgeWake() {
+        Log.d(TAG, "Acknowledge wake requested")
+        stopAlarm()
+
+        // UI를 즉시 정상 상태로 전환 (다음 프레임에서 다시 판정됨)
+        val normalized = PipelineResult(
+            frameTimestampMs = System.currentTimeMillis(),
+            isFaceDetected = true,
+            leftEye = null,
+            rightEye = null,
+            drowsinessState = DrowsinessState.NORMAL
+        )
+        floatingWindowManager?.updateState(true, DrowsinessState.NORMAL)
+        pipelineResultListener?.invoke(normalized)
+    }
+
+    private data class SettingsSnapshot(
+        val sensitivity: DrowsinessSensitivity,
+        val level1Sound: AlarmSound,
+        val level1Volume: Int,
+        val level2Sound: AlarmSound,
+        val level2Volume: Int
+    )
+
+    private enum class AlarmLevel { NONE, LEVEL1, LEVEL2 }
     
     companion object {
         private const val TAG = "MonitoringService"
@@ -271,6 +398,7 @@ class MonitoringService : Service(), PipelineListener {
         
         const val ACTION_START_MONITORING = "ac.sbmax002.eye_on.START_MONITORING"
         const val ACTION_STOP_MONITORING = "ac.sbmax002.eye_on.STOP_MONITORING"
+        const val ACTION_ACK_WAKE = "ac.sbmax002.eye_on.ACK_WAKE"
         
         fun startMonitoring(context: Context) {
             val intent = Intent(context, MonitoringService::class.java).apply {
@@ -289,6 +417,17 @@ class MonitoringService : Service(), PipelineListener {
                 action = ACTION_STOP_MONITORING
             }
             context.startService(intent)
+        }
+
+        fun acknowledgeWake(context: Context) {
+            val intent = Intent(context, MonitoringService::class.java).apply {
+                action = ACTION_ACK_WAKE
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         }
     }
 }

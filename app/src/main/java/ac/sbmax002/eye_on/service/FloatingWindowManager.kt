@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
  */
 class FloatingWindowManager(
     private val context: Context,
-    private val settingsRepository: SettingsRepository? = null
+    private val settingsRepository: SettingsRepository? = null,
+    private val onWakeUpClicked: (() -> Unit)? = null
 ) {
     
     private var windowManager: WindowManager? = null
@@ -218,8 +219,9 @@ class FloatingWindowManager(
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    // 드래그가 아니면 클릭으로 판단하여 앱으로 복귀
+                // 드래그가 아니면 클릭으로 판단하여 앱으로 복귀 + 알람 해제 신호
                     if (!isDragging) {
+                    onWakeUpClicked?.invoke()
                         openMainActivity()
                     }
                     return true
