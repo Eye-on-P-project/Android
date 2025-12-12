@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
 
 /**
  * 설정 화면
@@ -83,6 +84,16 @@ fun SettingsScreen(
                     label = "음량",
                     volume = uiState.level2Volume,
                     onVolumeChange = { viewModel.updateLevel2Volume(it) }
+                )
+            }
+
+            // 민감도 섹션
+            SettingsSection(
+                title = "민감도"
+            ) {
+                SensitivitySelector(
+                    selectedSensitivity = uiState.drowsinessSensitivity,
+                    onSensitivitySelected = { viewModel.updateDrowsinessSensitivity(it) }
                 )
             }
             
@@ -337,6 +348,40 @@ private fun SettingToggleItem(
                 uncheckedTrackColor = Color(0xFF424242)
             )
         )
+    }
+}
+
+/**
+ * 졸음 감지 민감도 선택 버튼 그룹
+ */
+@Composable
+private fun SensitivitySelector(
+    selectedSensitivity: DrowsinessSensitivity,
+    onSensitivitySelected: (DrowsinessSensitivity) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        DrowsinessSensitivity.values().forEach { sensitivity ->
+            val isSelected = sensitivity == selectedSensitivity
+            Button(
+                onClick = { onSensitivitySelected(sensitivity) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected) Color(0xFF007AFF) else Color(0xFF1A1A1A),
+                    contentColor = if (isSelected) Color.White else Color(0xFF99A1AF)
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = sensitivity.displayName,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = (-0.31).sp
+                )
+            }
+        }
     }
 }
 

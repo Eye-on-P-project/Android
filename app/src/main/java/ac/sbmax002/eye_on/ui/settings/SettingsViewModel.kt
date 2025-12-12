@@ -29,6 +29,7 @@ class SettingsViewModel @Inject constructor(
     private data class CoreSettings(
         val level1Sound: AlarmSound,
         val level1Volume: Int,
+        val drowsinessSensitivity: DrowsinessSensitivity,
         val level2Sound: AlarmSound,
         val level2Volume: Int,
         val iconSize: FloatingIconSize
@@ -48,16 +49,26 @@ class SettingsViewModel @Inject constructor(
     private fun loadSettings() {
         viewModelScope.launch {
             combine(
+                @Suppress("UNCHECKED_CAST")
                 combine(
                     settingsRepository.level1AlarmSound,
                     settingsRepository.level1Volume,
+                    settingsRepository.drowsinessSensitivity,
                     settingsRepository.level2AlarmSound,
                     settingsRepository.level2Volume,
                     settingsRepository.floatingIconSize
-                ) { level1Sound, level1Vol, level2Sound, level2Vol, iconSize ->
+                ) { values ->
+                    val level1Sound = values[0] as AlarmSound
+                    val level1Vol = values[1] as Int
+                    val sensitivity = values[2] as DrowsinessSensitivity
+                    val level2Sound = values[3] as AlarmSound
+                    val level2Vol = values[4] as Int
+                    val iconSize = values[5] as FloatingIconSize
+
                     CoreSettings(
                         level1Sound = level1Sound,
                         level1Volume = level1Vol,
+                        drowsinessSensitivity = sensitivity,
                         level2Sound = level2Sound,
                         level2Volume = level2Vol,
                         iconSize = iconSize
@@ -69,6 +80,7 @@ class SettingsViewModel @Inject constructor(
                 SettingsUiState(
                     level1AlarmSound = core.level1Sound,
                     level1Volume = core.level1Volume,
+                    drowsinessSensitivity = core.drowsinessSensitivity,
                     level2AlarmSound = core.level2Sound,
                     level2Volume = core.level2Volume,
                     floatingIconSize = core.iconSize,
@@ -78,6 +90,16 @@ class SettingsViewModel @Inject constructor(
             }.collect { state ->
                 _uiState.value = state
             }
+        }
+    }
+    
+    /**
+     * 졸음 감지 민감도 변경
+     */
+    fun updateDrowsinessSensitivity(sensitivity: DrowsinessSensitivity) {
+        _uiState.value = _uiState.value.copy(drowsinessSensitivity = sensitivity)
+        viewModelScope.launch {
+            settingsRepository.saveDrowsinessSensitivity(sensitivity)
         }
     }
     

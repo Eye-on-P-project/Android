@@ -17,10 +17,14 @@ import ac.sbmax002.eye_on.model.pipeline.PipelineListener
 import ac.sbmax002.eye_on.model.pipeline.PipelineResult
 import ac.sbmax002.eye_on.DTO.DrowsinessState
 import ac.sbmax002.eye_on.repository.SettingsRepository
+import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 
 /**
  * 모니터링을 관리하는 Foreground Service
@@ -37,6 +41,7 @@ class MonitoringService : Service(), PipelineListener {
     private var faceProcessingPipeline: FaceProcessingPipeline? = null
     private var floatingWindowManager: FloatingWindowManager? = null
     private var settingsRepository: SettingsRepository? = null
+    private var settingsJob: Job? = null
     
     private var isMonitoringStarted = false
 
@@ -98,12 +103,20 @@ class MonitoringService : Service(), PipelineListener {
             try {
                 // SettingsRepository 초기화 (Hilt 없이 직접 생성)
                 settingsRepository = SettingsRepository(applicationContext)
+                val initialDuration = settingsRepository?.drowsinessSensitivity?.first()
+                    ?.drowsyDurationMs ?: DrowsinessSensitivity.LOW.drowsyDurationMs
                 
                 // FaceProcessingPipeline 초기화
                 faceProcessingPipeline = FaceProcessingPipeline(
                     context = applicationContext,
-                    listener = this@MonitoringService
+                    listener = this@MonitoringService,
+                    drowsyDurationMs = initialDuration
                 )
+                settingsJob = serviceScope.launch {
+                    settingsRepository?.drowsinessSensitivity?.collectLatest { sensitivity ->
+                        faceProcessingPipeline?.updateDrowsyDuration(sensitivity.drowsyDurationMs)
+                    }
+                }
                 
                 // CameraManager 초기화 및 시작
                 cameraManager = ServiceCameraManager(
@@ -141,6 +154,8 @@ class MonitoringService : Service(), PipelineListener {
         cameraManager = null
         
         faceProcessingPipeline = null
+        settingsJob?.cancel()
+        settingsJob = null
         
         // 플로팅 윈도우 제거
         floatingWindowManager?.removeFloatingWindow()
