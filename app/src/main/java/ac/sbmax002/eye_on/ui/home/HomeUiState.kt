@@ -1,4 +1,5 @@
 package ac.sbmax002.eye_on.ui.home
+import ac.sbmax002.eye_on.model.statistics.SessionEvent
 
 data class HomeUiState(
     val isReady: Boolean = false,
@@ -9,6 +10,7 @@ data class HomeUiState(
     val drowsinessDetectionCount: Int = 0,
     val sleepDetectionCount: Int = 0,
     val appMode: AppMode = AppMode.DRIVING,
-    val cameraInitialized: Boolean = false
+    val cameraInitialized: Boolean = false,
+    val sessionEvents: List<SessionEvent> = emptyList()
 )
 
