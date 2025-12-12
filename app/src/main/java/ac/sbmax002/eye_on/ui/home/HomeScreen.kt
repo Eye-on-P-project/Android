@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.AlarmOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import ac.sbmax002.eye_on.service.MonitoringService
+import ac.sbmax002.eye_on.DTO.DrowsinessState
 import android.app.Activity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +94,9 @@ fun HomeScreen(
                     onSwitchToFloating = {
                         MonitoringService.startMonitoring(context)
                         (context as? Activity)?.moveTaskToBack(true)
+                    },
+                    onAcknowledgeWake = {
+                        MonitoringService.acknowledgeWake(context)
                     },
                     isCameraReady = isCameraReady,
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -307,65 +312,105 @@ private fun MonitoringView(
     uiState: HomeUiState,
     onStopMonitoring: () -> Unit,
     onSwitchToFloating: () -> Unit,
+    onAcknowledgeWake: () -> Unit,
     isCameraReady: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "Monitoring in Progress",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    letterSpacing = (-0.44).sp
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "Monitoring in Progress",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        letterSpacing = (-0.44).sp
+                    )
+
+                    Text(
+                        text = "플로팅 모드로 전환하여 다른 앱을 사용할 수 있습니다",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xFF99A1AF),
+                        textAlign = TextAlign.Center,
+                        letterSpacing = (-0.15).sp
+                    )
+                }
+
+                AnimatedButton(
+                    onClick = onSwitchToFloating,
+                    enabled = true,
+                    backgroundColor = Color(0xFF007AFF),
+                    disabledBackgroundColor = Color(0xFF424242),
+                    text = "플로팅 모드로 전환",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                AnimatedButton(
+                    onClick = onStopMonitoring,
+                    enabled = true,
+                    backgroundColor = Color(0xFFE53935),
+                    disabledBackgroundColor = Color(0xFF424242),
+                    text = "모니터링 종료",
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Text(
-                    text = "플로팅 모드로 전환하여 다른 앱을 사용할 수 있습니다",
-                    fontSize = 14.sp,
+                    text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF99A1AF),
+                    color = Color(0xFF757575),
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.15).sp
+                    letterSpacing = 0.sp
                 )
+        }
+
+        // 모니터링 화면에서 바로 알람 해제할 수 있는 중앙 오버레이 버튼
+        if (uiState.currentDrowsinessState != DrowsinessState.NORMAL) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    onClick = onAcknowledgeWake,
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .heightIn(min = 56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E88E5),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AlarmOff,
+                        contentDescription = "알람 해제",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "알람 해제 (깨어났어요)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.2).sp
+                    )
+                }
             }
-
-            AnimatedButton(
-                onClick = onSwitchToFloating,
-                enabled = true,
-                backgroundColor = Color(0xFF007AFF),
-                disabledBackgroundColor = Color(0xFF424242),
-                text = "플로팅 모드로 전환",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            AnimatedButton(
-                onClick = onStopMonitoring,
-                enabled = true,
-                backgroundColor = Color(0xFFE53935),
-                disabledBackgroundColor = Color(0xFF424242),
-                text = "모니터링 종료",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(
-                text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color(0xFF757575),
-                textAlign = TextAlign.Center,
-                letterSpacing = 0.sp
-            )
+        }
     }
 }
 
