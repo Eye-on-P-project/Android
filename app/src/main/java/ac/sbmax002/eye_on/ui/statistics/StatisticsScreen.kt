@@ -164,7 +164,7 @@ fun CurrentSessionView(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(if(isDriving) "수면 경고 횟수" else "자리 비움 경고", color = Color.Gray)
-                    Text("0회", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("${homeUiState.sleepDetectionCount}회", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
