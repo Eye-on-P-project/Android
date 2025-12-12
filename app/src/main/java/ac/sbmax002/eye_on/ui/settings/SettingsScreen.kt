@@ -1,6 +1,5 @@
 package ac.sbmax002.eye_on.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,13 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 /**
  * 설정 화면
@@ -30,7 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = viewModel(),
+    viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToLevel1Alert: () -> Unit = {}
 ) {
@@ -109,12 +107,6 @@ fun SettingsScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                SettingToggleItem(
-                    label = "다크 모드",
-                    checked = uiState.darkModeEnabled,
-                    onCheckedChange = { viewModel.toggleDarkMode() }
-                )
             }
         }
     }

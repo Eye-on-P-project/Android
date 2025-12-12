@@ -1,5 +1,6 @@
 package ac.sbmax002.eye_on.ui.settings
 
+import android.annotation.SuppressLint
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.util.Log
@@ -22,8 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -36,7 +37,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Level1AlertScreen(
-    viewModel: SettingsViewModel = viewModel(),
+    viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -44,13 +45,9 @@ fun Level1AlertScreen(
     val scope = rememberCoroutineScope()
     val primaryColor = MaterialTheme.colorScheme.primary
     
-    // 현재 선택된 알림음 (기존 값이 deprecated면 새 값으로 변환)
-    val initialSound = when (uiState.level1AlarmSound) {
-        AlarmSound.CHIME -> AlarmSound.BELL_NOTIFICATION
-        AlarmSound.SIREN_OLD -> AlarmSound.SIREN
-        else -> uiState.level1AlarmSound
-    }
-    var selectedSound by remember { mutableStateOf(initialSound) }
+    // 현재 저장된 설정값으로 선택값 동기화
+    val initialSound = normalizeAlarmSound(uiState.level1AlarmSound)
+    var selectedSound by remember(initialSound) { mutableStateOf(initialSound) }
     
     // 미리듣기 관련 상태
     var playingSound by remember { mutableStateOf<AlarmSound?>(null) }
@@ -282,11 +279,20 @@ private fun AlarmSoundItem(
     }
 }
 
+private fun normalizeAlarmSound(sound: AlarmSound): AlarmSound {
+    return when (sound.name) {
+        "CHIME" -> AlarmSound.BELL_NOTIFICATION
+        "SIREN_OLD" -> AlarmSound.SIREN
+        else -> sound
+    }
+}
+
 /**
  * 미리듣기 소리 재생
  * 재생 버튼 클릭 시에만 호출됩니다.
  * 최대 5초간 재생하고 자동으로 멈춥니다.
  */
+@SuppressLint("DiscouragedApi") // getIdentifier 사용 경고 억제 (동적 리소스 이름 지원)
 private suspend fun playPreviewSound(
     context: android.content.Context,
     sound: AlarmSound,

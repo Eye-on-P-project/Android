@@ -95,5 +95,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    
+    // DataStore - 설정값 저장
+    implementation(libs.androidx.datastore.preferences)
 
 }
