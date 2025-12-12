@@ -127,6 +127,10 @@ class MonitoringService : Service(), PipelineListener {
                     onFrameAvailable = { imageProxy ->
                         // 카메라 프레임을 파이프라인에 전달
                         faceProcessingPipeline?.process(imageProxy, true) // 전면 카메라
+
+
+                        imageProxy.close()
+
                     }
                 )
                 
