@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ac.sbmax002.eye_on.model.statistics.DrivingSession
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
 import ac.sbmax002.eye_on.ui.home.AppMode
 import java.text.SimpleDateFormat
@@ -78,7 +80,8 @@ fun StatisticsScreen(
             } else {
                 // [CASE 2] 통계 대시보드 화면
                 HistoryListView(
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onNavigateToDetail = onNavigateToDetail
                 )
             }
         }
@@ -187,11 +190,15 @@ fun CurrentSessionView(
 // ================================================================
 @Composable
 fun HistoryListView(
-    viewModel: StatisticsViewModel
+    viewModel: StatisticsViewModel,
+    onNavigateToDetail: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     val tabs = viewModel.filters
+    val sessions = remember(uiState.sessions) {
+        uiState.sessions.sortedByDescending { it.rawDateTime }
+    }
 
     // 모드에 따른 UI 분기
     val isDriving = uiState.appMode == AppMode.DRIVING
@@ -207,6 +214,9 @@ fun HistoryListView(
             .padding(horizontal = 16.dp)
             .padding(bottom = 20.dp)
     ) {
+        SectionTitle(text = "전체 세션 통계")
+        Spacer(modifier = Modifier.height(12.dp))
+
         // 1. 상단 탭 (주간/월간/전체)
         Row(
             modifier = Modifier
@@ -333,11 +343,36 @@ fun HistoryListView(
 
             TimeFrequencyRow(label = "오전 (06:00-12:00)", count = uiState.timeDistribution[0], max = maxCount, color = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            TimeFrequencyRow(label = "오후 (12:00-18:00)", count = uiState.timeDistribution[1], max = maxCount, color = Color(0xFFFFC107))
+            TimeFrequencyRow(label = "오후 (12:00-18:00)", count = uiState.timeDistribution[1], max = maxCount, color = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            TimeFrequencyRow(label = "저녁 (18:00-24:00)", count = uiState.timeDistribution[2], max = maxCount, color = Color(0xFFE53935))
+            TimeFrequencyRow(label = "저녁 (18:00-24:00)", count = uiState.timeDistribution[2], max = maxCount, color = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
             TimeFrequencyRow(label = "새벽 (00:00-06:00)", count = uiState.timeDistribution[3], max = maxCount, color = themeColor)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionTitle(text = "세션별 기록")
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (sessions.isEmpty()) {
+            Text(
+                text = "표시할 세션이 없습니다.",
+                color = Color.Gray,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                sessions.forEach { session ->
+                    SessionListItem(
+                        session = session,
+                        isDriving = isDriving,
+                        accentColor = themeColor,
+                        onClick = { onNavigateToDetail(session.id) }
+                    )
+                }
+            }
         }
     }
 }
@@ -374,6 +409,96 @@ fun DashboardCard(
             content()
         }
     }
+}
+
+@Composable
+fun SessionListItem(
+    session: DrivingSession,
+    isDriving: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF414141)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(session.dateStr, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("${session.time}부터 • ${session.durationStr} 동안", color = Color.Gray, fontSize = 14.sp)
+                }
+                Text(
+                    text = if (isDriving) "운전 모드" else "스터디 모드",
+                    color = accentColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            //Text(session.location, color = Color(0xFFBDBDBD), fontSize = 13.sp)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AlertBadge(text = if (isDriving) "졸음" else "주의", value = session.level1Alerts, color = Color(0xFFFFC107))
+                    AlertBadge(text = if (isDriving) "수면" else "자리", value = session.level2Alerts, color = Color(0xFFE53935))
+                }
+
+                Text(
+                    text = "자세히 보기",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertBadge(text: String, value: Int, color: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color(0xFF1F1F1F))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text("$text ${value}회", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        color = Color.White,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold
+    )
 }
 
 // [UI Components] 시간대별 빈도 Row
