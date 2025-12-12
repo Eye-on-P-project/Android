@@ -41,13 +41,55 @@ fun Level1AlertScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    AlertSoundScreen(
+        title = "졸음 경고 1단계",
+        initialSound = uiState.level1AlarmSound,
+        volume = uiState.level1Volume,
+        onSaveSound = { viewModel.updateLevel1AlarmSound(it) },
+        onNavigateBack = onNavigateBack
+    )
+}
+
+/**
+ * 2단계 수면 경고 알림음 설정 화면
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Level2AlertScreen(
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
+    AlertSoundScreen(
+        title = "수면 경고 2단계",
+        initialSound = uiState.level2AlarmSound,
+        volume = uiState.level2Volume,
+        onSaveSound = { viewModel.updateLevel2AlarmSound(it) },
+        onNavigateBack = onNavigateBack
+    )
+}
+
+/**
+ * 공통 알림음 설정 화면
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlertSoundScreen(
+    title: String,
+    initialSound: AlarmSound,
+    volume: Int,
+    onSaveSound: (AlarmSound) -> Unit,
+    onNavigateBack: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val primaryColor = MaterialTheme.colorScheme.primary
     
+    val normalizedInitialSound = normalizeAlarmSound(initialSound)
+    
     // 현재 저장된 설정값으로 선택값 동기화
-    val initialSound = normalizeAlarmSound(uiState.level1AlarmSound)
-    var selectedSound by remember(initialSound) { mutableStateOf(initialSound) }
+    var selectedSound by remember(normalizedInitialSound) { mutableStateOf(normalizedInitialSound) }
     
     // 미리듣기 관련 상태
     var playingSound by remember { mutableStateOf<AlarmSound?>(null) }
@@ -62,12 +104,12 @@ fun Level1AlertScreen(
                         stop()
                     }
                 } catch (e: Exception) {
-                    Log.e("Level1AlertScreen", "Error stopping MediaPlayer: ${e.message}")
+                    Log.e("AlertSoundScreen", "Error stopping MediaPlayer: ${e.message}")
                 }
                 try {
                     release()
                 } catch (e: Exception) {
-                    Log.e("Level1AlertScreen", "Error releasing MediaPlayer: ${e.message}")
+                    Log.e("AlertSoundScreen", "Error releasing MediaPlayer: ${e.message}")
                 }
             }
             mediaPlayer = null
@@ -77,7 +119,10 @@ fun Level1AlertScreen(
     
     Scaffold(
         topBar = {
-            Level1AlertTopBar(onBackClick = onNavigateBack)
+            AlertTopBar(
+                title = title,
+                onBackClick = onNavigateBack
+            )
         },
         containerColor = Color(0xFF1A1A1A)
     ) { paddingValues ->
@@ -101,7 +146,7 @@ fun Level1AlertScreen(
                 ),
                 selectedSound = selectedSound,
                 playingSound = playingSound,
-                volume = uiState.level1Volume,
+                volume = volume,
                 primaryColor = primaryColor,
                 onSoundSelected = { sound ->
                     // 리스트 클릭: 선택만 수행 (소리 재생 안 함)
@@ -113,7 +158,7 @@ fun Level1AlertScreen(
                         playPreviewSound(
                             context = context,
                             sound = sound,
-                            volume = uiState.level1Volume,
+                            volume = volume,
                             onStart = { playingSound = sound },
                             onComplete = { playingSound = null },
                             getMediaPlayer = { mediaPlayer },
@@ -128,7 +173,7 @@ fun Level1AlertScreen(
             // 저장 버튼
             Button(
                 onClick = {
-                    viewModel.updateLevel1AlarmSound(selectedSound)
+                    onSaveSound(selectedSound)
                     onNavigateBack()
                 },
                 modifier = Modifier
@@ -152,15 +197,18 @@ fun Level1AlertScreen(
 }
 
 /**
- * 1단계 알림음 설정 화면의 TopAppBar
+ * 알림음 설정 화면의 TopAppBar
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Level1AlertTopBar(onBackClick: () -> Unit) {
+private fun AlertTopBar(
+    title: String,
+    onBackClick: () -> Unit
+) {
     TopAppBar(
         title = {
             Text(
-                text = "졸음 경고 1단계",
+                text = title,
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Normal,
@@ -315,16 +363,16 @@ private suspend fun playPreviewSound(
             try {
                 if (isPlaying) {
                     stop()
-                    Log.d("Level1Alert", "Stopped existing player")
+                    Log.d("AlertSound", "Stopped existing player")
                 }
             } catch (e: Exception) {
-                Log.e("Level1Alert", "Error stopping existing player: ${e.message}")
+                Log.e("AlertSound", "Error stopping existing player: ${e.message}")
             }
             try {
                 release()
-                Log.d("Level1Alert", "Released existing player")
+                Log.d("AlertSound", "Released existing player")
             } catch (e: Exception) {
-                Log.e("Level1Alert", "Error releasing existing player: ${e.message}")
+                Log.e("AlertSound", "Error releasing existing player: ${e.message}")
             }
         }
         
@@ -336,9 +384,9 @@ private suspend fun playPreviewSound(
             .removeSuffix(".wav")
             .removeSuffix(".ogg")
         
-        Log.d("Level1Alert", "=== Sound Playback Debug ===")
-        Log.d("Level1Alert", "resName: $resName")
-        Log.d("Level1Alert", "volume: $volume")
+        Log.d("AlertSound", "=== Sound Playback Debug ===")
+        Log.d("AlertSound", "resName: $resName")
+        Log.d("AlertSound", "volume: $volume")
         
         // 리소스 ID 가져오기
         val resourceId = context.resources.getIdentifier(
@@ -347,10 +395,10 @@ private suspend fun playPreviewSound(
             context.packageName
         )
         
-        Log.d("Level1Alert", "resId: $resourceId")
+        Log.d("AlertSound", "resId: $resourceId")
         
         if (resourceId == 0) {
-            Log.e("Level1Alert", "Resource not found: $resName (original: ${sound.fileName})")
+            Log.e("AlertSound", "Resource not found: $resName (original: ${sound.fileName})")
             onComplete()
             return
         }
@@ -364,10 +412,10 @@ private suspend fun playPreviewSound(
         
         audioFocusRequest = focusRequest
         
-        Log.d("Level1Alert", "Audio focus request result: $focusRequest")
+        Log.d("AlertSound", "Audio focus request result: $focusRequest")
         
         if (focusRequest != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            Log.w("Level1Alert", "Audio focus not granted. Result: $focusRequest")
+            Log.w("AlertSound", "Audio focus not granted. Result: $focusRequest")
             // 포커스를 받지 못해도 재생 시도 (일부 기기에서는 작동할 수 있음)
         }
         
@@ -390,50 +438,50 @@ private suspend fun playPreviewSound(
             // 준비
             mediaPlayer.prepare()
             
-            Log.d("Level1Alert", "MediaPlayer prepared successfully")
+            Log.d("AlertSound", "MediaPlayer prepared successfully")
             
             // 음량 설정 (0.0f ~ 1.0f)
             val volumeLevel = (volume / 100f).coerceIn(0f, 1f)
             mediaPlayer.setVolume(volumeLevel, volumeLevel)
-            Log.d("Level1Alert", "Volume set: $volumeLevel (from $volume)")
+            Log.d("AlertSound", "Volume set: $volumeLevel (from $volume)")
             
             // 재생 완료 리스너
             mediaPlayer.setOnCompletionListener {
-                Log.d("Level1Alert", "Playback completed")
+                Log.d("AlertSound", "Playback completed")
                 // 오디오 포커스 해제
                 if (focusRequest == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                     audioManager.abandonAudioFocus(null)
-                    Log.d("Level1Alert", "Audio focus abandoned")
+                    Log.d("AlertSound", "Audio focus abandoned")
                 }
                 onComplete()
                 try {
                     mediaPlayer.release()
                 } catch (e: Exception) {
-                    Log.e("Level1Alert", "Error releasing on completion: ${e.message}")
+                    Log.e("AlertSound", "Error releasing on completion: ${e.message}")
                 }
                 setMediaPlayer(null)
             }
             
             // 에러 리스너
             mediaPlayer.setOnErrorListener { _, what, extra ->
-                Log.e("Level1Alert", "MediaPlayer error: what=$what, extra=$extra")
+                Log.e("AlertSound", "MediaPlayer error: what=$what, extra=$extra")
                 // 오디오 포커스 해제
                 if (focusRequest == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                     audioManager.abandonAudioFocus(null)
-                    Log.d("Level1Alert", "Audio focus abandoned on error")
+                    Log.d("AlertSound", "Audio focus abandoned on error")
                 }
                 onComplete()
                 try {
                     mediaPlayer.release()
                 } catch (e: Exception) {
-                    Log.e("Level1Alert", "Error releasing on error: ${e.message}")
+                    Log.e("AlertSound", "Error releasing on error: ${e.message}")
                 }
                 setMediaPlayer(null)
                 true
             }
             
             // 재생 시작
-            Log.d("Level1Alert", "Starting playback...")
+            Log.d("AlertSound", "Starting playback...")
             onStart()
             mediaPlayer.start()
             setMediaPlayer(mediaPlayer)
@@ -441,17 +489,17 @@ private suspend fun playPreviewSound(
             // 재생 상태 확인
             delay(100) // 재생 시작 대기
             val isActuallyPlaying = mediaPlayer.isPlaying
-            Log.d("Level1Alert", "Playback started. isPlaying: $isActuallyPlaying")
+            Log.d("AlertSound", "Playback started. isPlaying: $isActuallyPlaying")
             
             if (!isActuallyPlaying) {
-                Log.e("Level1Alert", "MediaPlayer start() called but not playing!")
+                Log.e("AlertSound", "MediaPlayer start() called but not playing!")
                 // 재시도
                 try {
                     mediaPlayer.start()
                     delay(100)
-                    Log.d("Level1Alert", "Retry start. isPlaying: ${mediaPlayer.isPlaying}")
+                    Log.d("AlertSound", "Retry start. isPlaying: ${mediaPlayer.isPlaying}")
                 } catch (e: Exception) {
-                    Log.e("Level1Alert", "Error retrying playback: ${e.message}", e)
+                    Log.e("AlertSound", "Error retrying playback: ${e.message}", e)
                 }
             }
             
@@ -463,57 +511,57 @@ private suspend fun playPreviewSound(
                 5000L
             }
             
-            Log.d("Level1Alert", "Duration: ${duration}ms, Will play for: ${playDuration}ms")
+            Log.d("AlertSound", "Duration: ${duration}ms, Will play for: ${playDuration}ms")
             
             delay(playDuration)
             
             // 아직 재생 중이면 중지
             if (mediaPlayer.isPlaying) {
-                Log.d("Level1Alert", "Stopping playback after ${playDuration}ms")
+                Log.d("AlertSound", "Stopping playback after ${playDuration}ms")
                 try {
                     mediaPlayer.stop()
                 } catch (e: Exception) {
-                    Log.e("Level1Alert", "Error stopping after delay: ${e.message}")
+                    Log.e("AlertSound", "Error stopping after delay: ${e.message}")
                 }
                 // 오디오 포커스 해제
                 if (focusRequest == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                     audioManager.abandonAudioFocus(null)
-                    Log.d("Level1Alert", "Audio focus abandoned after delay")
+                    Log.d("AlertSound", "Audio focus abandoned after delay")
                 }
                 onComplete()
                 try {
                     mediaPlayer.release()
                 } catch (e: Exception) {
-                    Log.e("Level1Alert", "Error releasing after delay: ${e.message}")
+                    Log.e("AlertSound", "Error releasing after delay: ${e.message}")
                 }
                 setMediaPlayer(null)
             } else {
-                Log.d("Level1Alert", "Playback already finished")
+                Log.d("AlertSound", "Playback already finished")
             }
             
         } catch (e: Exception) {
-            Log.e("Level1Alert", "Error during playback: ${e.message}", e)
+            Log.e("AlertSound", "Error during playback: ${e.message}", e)
             // 오디오 포커스 해제
             if (focusRequest == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 audioManager.abandonAudioFocus(null)
-                Log.d("Level1Alert", "Audio focus abandoned on exception")
+                Log.d("AlertSound", "Audio focus abandoned on exception")
             }
             onComplete()
             try {
                 mediaPlayer.release()
             } catch (ex: Exception) {
-                Log.e("Level1Alert", "Error releasing on Exception: ${ex.message}")
+                Log.e("AlertSound", "Error releasing on Exception: ${ex.message}")
             }
             setMediaPlayer(null)
         }
         
     } catch (e: Exception) {
-        Log.e("Level1Alert", "Error creating MediaPlayer: ${e.message}", e)
+        Log.e("AlertSound", "Error creating MediaPlayer: ${e.message}", e)
         // 오디오 포커스 해제
         audioFocusRequest?.let {
             if (it == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 audioManager.abandonAudioFocus(null)
-                Log.d("Level1Alert", "Audio focus abandoned on outer exception")
+                Log.d("AlertSound", "Audio focus abandoned on outer exception")
             }
         }
         onComplete()

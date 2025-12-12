@@ -31,7 +31,8 @@ import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToLevel1Alert: () -> Unit = {}
+    onNavigateToLevel1Alert: () -> Unit = {},
+    onNavigateToLevel2Alert: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
@@ -75,7 +76,7 @@ fun SettingsScreen(
                 AlarmSoundSelector(
                     label = "알림음",
                     currentSound = uiState.level2AlarmSound,
-                    onSoundClick = { /* TODO: 알림음 선택 다이얼로그 */ }
+                    onSoundClick = onNavigateToLevel2Alert
                 )
                 
                 Spacer(modifier = Modifier.height(20.dp))
