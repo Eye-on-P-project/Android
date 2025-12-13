@@ -23,9 +23,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.camera.view.PreviewView
 import ac.sbmax002.eye_on.camera.CameraManager
 import ac.sbmax002.eye_on.camera.CameraConfig
+import ac.sbmax002.eye_on.camera.ServiceCameraManager
 import android.util.Log
 import android.view.ViewGroup
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import ac.sbmax002.eye_on.service.MonitoringService
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 fun CameraPreviewContainer(
@@ -33,10 +40,22 @@ fun CameraPreviewContainer(
     isFaceDetected: Boolean,
     onFaceDetectionChanged: (Boolean) -> Unit,
     isMonitoring: Boolean = false, // 모니터링 중 여부
+    monitoringService: MonitoringService? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Activity/Composable 가 전면에 있는지 추적
+    var isInForeground by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            isInForeground = event == Lifecycle.Event.ON_RESUME || event == Lifecycle.Event.ON_START
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // PreviewView를 remember로 관리
     val previewView = remember {
@@ -64,24 +83,50 @@ fun CameraPreviewContainer(
         )
     }
 
-    // isReady 상태와 모니터링 상태에 따라 카메라 시작/중지
-    // 모니터링 중일 때는 Activity 카메라를 사용하지 않음 (Service가 카메라를 사용 중)
-    LaunchedEffect(isReady, isMonitoring) {
-        if (isReady && !isMonitoring) {
-            // 모니터링 중이 아니고 준비되었을 때만 카메라 시작
-            try {
-                cameraManager.startCamera(previewView)
-                Log.d("CameraPreview", "Activity camera started")
-            } catch (e: Exception) {
-                Log.e("CameraPreview", "Failed to start camera", e)
+    val composeScope = rememberCoroutineScope()
+
+    // isReady/모니터링 상태에 따라 카메라 시작/중지 및 서비스 프리뷰 부착
+    LaunchedEffect(isReady, isMonitoring, monitoringService, isInForeground) {
+        if (isMonitoring && monitoringService != null && isInForeground) {
+            // Activity 카메라는 중지하고, 서비스 카메라에 프리뷰를 붙인다
+            runCatching { cameraManager.stopCamera() }
+            // 서비스 카메라가 준비될 때까지 짧게 재시도
+            var attached = false
+            repeat(5) { attempt ->
+                val scm: ServiceCameraManager? = monitoringService.getCameraManager()
+                if (scm != null) {
+                    runCatching {
+                        scm.attachPreview(previewView)
+                        Log.d("CameraPreview", "Attached preview to service camera (attempt ${attempt + 1})")
+                        attached = true
+                    }.onFailure { e ->
+                        Log.e("CameraPreview", "Failed to attach preview to service camera", e)
+                    }
+                    if (attached) return@repeat
+                }
+                delay(150)
             }
         } else {
-            // 모니터링 중이거나 준비되지 않았을 때 카메라 중지
-            try {
-                cameraManager.stopCamera()
+            // 서비스 프리뷰 분리
+            monitoringService?.getCameraManager()?.let { scm ->
+                runCatching {
+                    scm.detachPreview()
+                    Log.d("CameraPreview", "Detached preview from service camera")
+                }.onFailure { e ->
+                    Log.e("CameraPreview", "Failed to detach preview from service camera", e)
+                }
+            }
+            // Activity 카메라는 모니터링이 아닐 때만 사용
+            if (isReady && !isMonitoring) {
+                try {
+                    cameraManager.startCamera(previewView)
+                    Log.d("CameraPreview", "Activity camera started")
+                } catch (e: Exception) {
+                    Log.e("CameraPreview", "Failed to start camera", e)
+                }
+            } else {
+                runCatching { cameraManager.stopCamera() }
                 Log.d("CameraPreview", "Activity camera stopped (isReady=$isReady, isMonitoring=$isMonitoring)")
-            } catch (e: Exception) {
-                Log.e("CameraPreview", "Failed to stop camera", e)
             }
         }
     }
@@ -89,11 +134,12 @@ fun CameraPreviewContainer(
     // 컴포저블이 dispose될 때 리소스 정리
     DisposableEffect(Unit) {
         onDispose {
-            try {
-                cameraManager.stopCamera()
-            } catch (e: Exception) {
-                Log.e("CameraPreview", "Failed to stop camera on dispose", e)
+            monitoringService?.getCameraManager()?.let { scm ->
+                composeScope.launch {
+                    runCatching { scm.detachPreview() }
+                }
             }
+            runCatching { cameraManager.stopCamera() }
         }
     }
 
@@ -131,8 +177,8 @@ fun CameraPreviewContainer(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (isReady && !isMonitoring) {
-            // 실제 카메라 프리뷰 (모니터링 중이 아닐 때만)
+        if (isReady && (!isMonitoring || monitoringService != null)) {
+            // 실제 카메라 프리뷰
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -143,36 +189,51 @@ fun CameraPreviewContainer(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 원형 가이드와 안내 텍스트 오버레이
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 원형 가이드 영역
-                    CircularGuideOverlay(
-                        isFaceDetected = isFaceDetected,
-                        modifier = Modifier
-                    )
-
-                    // 안내 텍스트 (카메라 프리뷰 위에 오버레이)
+                if (!isMonitoring) {
+                    // 원형 가이드와 안내 텍스트 오버레이 (Activity 프리뷰일 때만 표시)
                     Column(
+                        modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularGuideOverlay(
+                            isFaceDetected = isFaceDetected,
+                            modifier = Modifier
+                        )
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "얼굴을 원 안에 맞춰주세요",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                letterSpacing = (-0.44).sp
+                            )
+                        }
+                    }
+                } else {
+                    // 서비스 프리뷰 공유 중 간단 안내
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "얼굴을 원 안에 맞춰주세요",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            letterSpacing = (-0.44).sp
+                            text = "모니터링 중 프리뷰 공유",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
                         )
                     }
                 }
             }
         } else if (isMonitoring) {
-            // 모니터링 중일 때 표시할 메시지
+            // 모니터링 중이지만 서비스 프리뷰를 붙일 수 없을 때
             Column(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
