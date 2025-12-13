@@ -2,6 +2,7 @@ package ac.sbmax002.eye_on.repository
 
 import ac.sbmax002.eye_on.ui.home.AppMode
 import ac.sbmax002.eye_on.database.StatisticsDao
+import ac.sbmax002.eye_on.model.statistics.BatteryUsageTracker
 import ac.sbmax002.eye_on.model.statistics.DrivingSession
 import ac.sbmax002.eye_on.model.statistics.SessionEvent
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +23,7 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
     }
 
     // 3. 운전 시작: 새 세션 ID 생성 및 DB 저장
-    suspend fun startDrivingSession(currentMode: AppMode): String {
+    suspend fun startDrivingSession(currentMode: AppMode, startBatteryPercent: Int?): String {
         val newSessionId = UUID.randomUUID().toString()
         val now = LocalDateTime.now()
 
@@ -37,7 +38,8 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
             level1Alerts = 0,
             level2Alerts = 0,
             rawDateTime = now,
-            mode = currentMode
+            mode = currentMode,
+            startBatteryPercent = startBatteryPercent ?: -1
         )
 
         statisticsDao.insertSession(newSession)
@@ -71,7 +73,7 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
     }
 
     // 5. 운전 종료: 주행 시간 계산 및 저장
-    suspend fun endDrivingSession(sessionId: String) {
+    suspend fun endDrivingSession(sessionId: String, batterySnapshot: BatteryUsageTracker.Snapshot?) {
         val session = statisticsDao.getSessionById(sessionId)
         session?.let {
             val endTime = LocalDateTime.now()
@@ -86,7 +88,9 @@ class StatisticsRepository(private val statisticsDao: StatisticsDao) {
             // DB 업데이트
             val finishedSession = it.copy(
                 durationMinutes = durationMin,
-                durationStr = durationStr
+                durationStr = durationStr,
+                endBatteryPercent = batterySnapshot?.endBatteryPercent ?: it.endBatteryPercent,
+                batteryUsagePercent = batterySnapshot?.usagePercent ?: it.batteryUsagePercent
             )
             statisticsDao.updateSession(finishedSession)
         }
