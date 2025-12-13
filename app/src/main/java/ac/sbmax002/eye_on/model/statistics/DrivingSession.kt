@@ -16,5 +16,8 @@ data class DrivingSession(
     val level1Alerts: Int,
     val level2Alerts: Int,
     val rawDateTime: LocalDateTime, // Converters.kt
-    val mode: AppMode = AppMode.DRIVING // Converters.kt
+    val mode: AppMode = AppMode.DRIVING, // Converters.kt
+    val startBatteryPercent: Int = -1,
+    val endBatteryPercent: Int = -1,
+    val batteryUsagePercent: Int = -1
 )

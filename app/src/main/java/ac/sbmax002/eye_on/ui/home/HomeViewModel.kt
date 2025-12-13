@@ -15,10 +15,12 @@ import ac.sbmax002.eye_on.DTO.DrowsinessState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import ac.sbmax002.eye_on.model.statistics.BatteryUsageTracker
 import ac.sbmax002.eye_on.model.statistics.SessionEvent
 
 class HomeViewModel(
-    private val repository: StatisticsRepository // DB 처리를 위해 주입받음
+    private val repository: StatisticsRepository, // DB 처리를 위해 주입받음
+    private val batteryUsageTracker: BatteryUsageTracker
 ) : ViewModel() {
 
     // 현재 실행 중인 세션 ID (DB 저장용)
@@ -57,7 +59,8 @@ class HomeViewModel(
         viewModelScope.launch {
             // ★ DB에 세션 시작 알림 & ID 발급
             val currentMode = _uiState.value.appMode
-            currentSessionId = repository.startDrivingSession(currentMode)
+            val startBattery = batteryUsageTracker.markStart()
+            currentSessionId = repository.startDrivingSession(currentMode, startBattery)
             Log.d("HomeViewModel", "DB Session Created: $currentSessionId")
 
             // 🔹 졸음 에피소드 상태 초기화
@@ -80,12 +83,14 @@ class HomeViewModel(
         val sessionId = currentSessionId
 
         viewModelScope.launch {
+            val batterySnapshot = batteryUsageTracker.markEnd()
             // ★ DB에 종료 알림
             if (sessionId != null) {
-                repository.endDrivingSession(sessionId)
+                repository.endDrivingSession(sessionId, batterySnapshot)
                 Log.d("HomeViewModel", "DB Session Ended: $sessionId")
             }
             currentSessionId = null
+            batteryUsageTracker.reset()
 
             // 🔹 에피소드 상태 리셋
             isInAlertState = false
@@ -275,11 +280,14 @@ class HomeViewModel(
 }
 
 // ★ ViewModelFactory 추가 (MainActivity에서 사용)
-class HomeViewModelFactory(private val repository: StatisticsRepository) : ViewModelProvider.Factory {
+class HomeViewModelFactory(
+    private val repository: StatisticsRepository,
+    private val batteryUsageTracker: BatteryUsageTracker
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(repository) as T
+            return HomeViewModel(repository, batteryUsageTracker) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

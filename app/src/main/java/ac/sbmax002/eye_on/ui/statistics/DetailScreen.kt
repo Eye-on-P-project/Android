@@ -69,6 +69,15 @@ fun DetailScreen(
                     fontSize = 20.sp
                 )
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 배터리 사용량 정보
+                BatteryUsageSection(
+                    start = session.startBatteryPercent,
+                    end = session.endBatteryPercent,
+                    usage = session.batteryUsagePercent
+                )
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // 2. Timeline Title
@@ -218,6 +227,41 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
         }
     }
 }
+
+@Composable
+private fun BatteryUsageSection(start: Int, end: Int, usage: Int) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("배터리 사용량", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                InfoBadge(label = "시작", value = percentOrDash(start))
+                InfoBadge(label = "종료", value = percentOrDash(end))
+                InfoBadge(label = "소모", value = percentOrDash(usage))
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoBadge(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF2A2A2A))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun percentOrDash(value: Int): String = if (value >= 0) "$value%" else "--"
 
 @Composable
 fun IntrinsicHeightRow(content: @Composable RowScope.() -> Unit) {

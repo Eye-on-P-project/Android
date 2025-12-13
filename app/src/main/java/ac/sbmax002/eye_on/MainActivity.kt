@@ -21,6 +21,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.ViewModelProvider
 import ac.sbmax002.eye_on.database.AppDatabase
+import ac.sbmax002.eye_on.model.statistics.BatteryUsageTracker
 import ac.sbmax002.eye_on.repository.StatisticsRepository
 import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.ui.home.CameraPermissionHandler
@@ -38,10 +39,11 @@ class MainActivity : ComponentActivity() {
     // 1. DB와 Repository는 한 번만 생성해서 공유합니다.
     private val database by lazy { AppDatabase.getDatabase(applicationContext) }
     private val repository by lazy { StatisticsRepository(database.statisticsDao()) }
+    private val batteryUsageTracker by lazy { BatteryUsageTracker(applicationContext) }
 
     // 2. HomeViewModel 생성 (Factory 사용)
     private val homeViewModel: HomeViewModel by viewModels {
-        HomeViewModelFactory(repository)
+        HomeViewModelFactory(repository, batteryUsageTracker)
     }
 
     // 3. StatisticsViewModel 생성 (Factory 사용) -> ★ 여기가 추가되어야 합니다.
