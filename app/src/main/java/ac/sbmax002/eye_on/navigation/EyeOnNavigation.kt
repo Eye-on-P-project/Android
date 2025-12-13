@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ac.sbmax002.eye_on.ui.home.HomeScreen
 import ac.sbmax002.eye_on.ui.home.HomeViewModel
+import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.ui.statistics.StatisticsScreen
 import ac.sbmax002.eye_on.ui.statistics.DetailScreen
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
@@ -29,7 +30,8 @@ import ac.sbmax002.eye_on.navigation.Routes
 fun EyeOnApp(
     homeViewModel: HomeViewModel,
     // ★ 수정: "= viewModel()" 기본값 제거 (반드시 주입받도록 강제)
-    statisticsViewModel: StatisticsViewModel
+    statisticsViewModel: StatisticsViewModel,
+    monitoringService: MonitoringService?
 ) {
     // 네비게이션 컨트롤러 생성 (화면 이동 관리자)
     val navController = rememberNavController()
@@ -48,7 +50,8 @@ fun EyeOnApp(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
-                }
+                },
+                monitoringService = monitoringService
             )
         }
 

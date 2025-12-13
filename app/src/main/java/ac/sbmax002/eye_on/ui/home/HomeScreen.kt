@@ -38,6 +38,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToStatistics: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    monitoringService: MonitoringService?,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,6 +77,7 @@ fun HomeScreen(
                             isReady = isCameraReady,
                             isFaceDetected = uiState.isFaceDetected,
                             isMonitoring = uiState.isMonitoring,
+                            monitoringService = monitoringService,
                             onFaceDetectionChanged = { detected ->
                                 viewModel.updateFaceDetection(detected)
                             },
@@ -128,6 +130,7 @@ fun HomeScreen(
                             isReady = isCameraReady,
                             isFaceDetected = uiState.isFaceDetected,
                             isMonitoring = uiState.isMonitoring,
+                            monitoringService = monitoringService,
                             onFaceDetectionChanged = { detected ->
                                 viewModel.updateFaceDetection(detected)
                             },

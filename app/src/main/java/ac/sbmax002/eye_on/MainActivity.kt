@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.ViewModelProvider
@@ -46,12 +49,15 @@ class MainActivity : ComponentActivity() {
         StatisticsViewModelFactory(repository)
     }
     private var monitoringService: MonitoringService? = null
+    // Compose에 전달하기 위한 상태 래퍼
+    private var monitoringServiceState by mutableStateOf<MonitoringService?>(null)
     private var isServiceBound = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as? MonitoringService.MonitoringBinder
             monitoringService = binder?.getService()
+            monitoringServiceState = monitoringService
             isServiceBound = true
             Log.d(TAG, "MonitoringService connected")
 
@@ -67,6 +73,7 @@ class MainActivity : ComponentActivity() {
             monitoringService?.setOnPipelineResultListener(null)
 
             monitoringService = null
+            monitoringServiceState = null
             isServiceBound = false
             Log.d(TAG, "MonitoringService disconnected")
         }
@@ -104,7 +111,8 @@ class MainActivity : ComponentActivity() {
                     // 4. 두 ViewModel을 모두 전달합니다.
                     EyeOnApp(
                         homeViewModel = homeViewModel,
-                        statisticsViewModel = statisticsViewModel
+                        statisticsViewModel = statisticsViewModel,
+                        monitoringService = monitoringServiceState
                     )
                 }
             }
@@ -129,6 +137,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         // 콜백 해제
         monitoringService?.setOnPipelineResultListener(null)
+        monitoringServiceState = null
         // Service 바인딩 해제
         if (isServiceBound) {
             unbindService(serviceConnection)
