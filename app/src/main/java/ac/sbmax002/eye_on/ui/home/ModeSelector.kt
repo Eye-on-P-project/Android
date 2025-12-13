@@ -62,6 +62,11 @@ private fun ModeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val selectedGradient = when (mode) {
+        AppMode.DRIVING -> listOf(Color(0xFF007AFF), Color(0xFF0051D5))
+        AppMode.STUDY -> listOf(Color(0xFFFF9800), Color(0xFFF57C00))
+    }
+
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -69,10 +74,7 @@ private fun ModeButton(
             .background(
                 brush = if (isSelected) {
                     Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF007AFF),
-                            Color(0xFF0051D5)
-                        )
+                        colors = selectedGradient
                     )
                 } else {
                     Brush.linearGradient(

@@ -291,7 +291,7 @@ private fun ReadyView(
                 },
                 // TODO: MediaPipe 연결 후 isFaceDetected 조건 다시 추가
                 enabled = cameraPermissionGranted && uiState.isReady, // && uiState.isFaceDetected,
-                backgroundColor = Color(0xFF007AFF),
+                backgroundColor = if (uiState.appMode == AppMode.STUDY) Color(0xFFFF9800) else Color(0xFF007AFF),
                 disabledBackgroundColor = Color(0xFF424242),
                 text = "모니터링 시작",
                 modifier = Modifier.fillMaxWidth()
