@@ -10,7 +10,7 @@ import ac.sbmax002.eye_on.model.statistics.SessionEvent
 import ac.sbmax002.eye_on.model.utils.Converters
 
 // entities: 사용할 테이블 목록, version: DB 구조가 바뀔 때 올려야 함
-@Database(entities = [DrivingSession::class, SessionEvent::class], version = 1, exportSchema = false)
+@Database(entities = [DrivingSession::class, SessionEvent::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
