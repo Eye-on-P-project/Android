@@ -39,8 +39,38 @@ fun EyeOnApp(
     // 네비게이션 호스트 (모든 화면을 여기서 관리)
     NavHost(
         navController = navController,
-        startDestination = Routes.HOME
+        startDestination = Routes.LOGIN
     ) {
+        // 로그인 화면
+        composable(Routes.LOGIN) {
+            ac.sbmax002.eye_on.ui.login.LoginScreen(
+                onNavigateToHome = {
+                    // 로그인 완료 후 홈 화면으로 이동하며, 뒤로가기 시 로그인 화면이 나오지 않도록 스택에서 제거
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+                onNavigateToSignUp = {
+                    navController.navigate(Routes.SIGN_UP)
+                }
+            )
+        }
+
+        // 회원가입 화면
+        composable(Routes.SIGN_UP) {
+            ac.sbmax002.eye_on.ui.login.SignUpScreen(
+                onNavigateToHome = {
+                    // 가입 완료 후 홈 화면으로 이동
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         // 1. 홈 화면
         composable(Routes.HOME) {
             HomeScreen(
