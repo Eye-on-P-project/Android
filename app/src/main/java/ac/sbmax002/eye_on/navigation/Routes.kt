@@ -8,6 +8,8 @@ package ac.sbmax002.eye_on.navigation
  * - navController.navigate("${Routes.DETAIL}/$sessionId")
  */
 object Routes {
+    const val LOGIN = "login"
+    const val SIGN_UP = "sign_up"
     const val HOME = "home"
     const val STATISTICS = "statistics"
     const val DETAIL = "detail"
