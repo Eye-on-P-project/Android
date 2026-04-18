@@ -17,6 +17,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ac.sbmax002.eye_on.network.NetworkConfig
+import ac.sbmax002.eye_on.network.LoginRequest
+import kotlinx.coroutines.launch
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,8 +29,10 @@ fun LoginScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToSignUp: () -> Unit
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     // 어두운 배경색 적용 (기존 앱 테마 유지)
     Surface(
@@ -91,7 +98,27 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             AnimatedButtonLogin(
-                onClick = onNavigateToHome,
+                onClick = {
+                    if (email.isNotBlank() && password.isNotBlank()) {
+                        scope.launch {
+                            try {
+                                val response = NetworkConfig.authApiService.login(LoginRequest(email, password))
+                                if (response.isSuccessful) {
+                                    onNavigateToHome()
+                                } else {
+                                    val msg = when(response.code()) {
+                                        401 -> "이메일 또는 비밀번호가 틀렸습니다."
+                                        400 -> "입력값이 올바르지 않습니다."
+                                        else -> "로그인 실패: ${response.code()}"
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "네트워크 연결을 확인해주세요.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
                 text = "로그인",
                 backgroundColor = Color(0xFF007AFF)
             )
