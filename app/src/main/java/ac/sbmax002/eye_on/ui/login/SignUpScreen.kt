@@ -19,6 +19,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ac.sbmax002.eye_on.network.NetworkConfig
+import ac.sbmax002.eye_on.network.SignupRequest
+import kotlinx.coroutines.launch
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,10 +31,12 @@ fun SignUpScreen(
     onNavigateToHome: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
     
     // 나이(년도) 드롭다운 상태
     var expandedYear by remember { mutableStateOf(false) }
@@ -179,7 +186,40 @@ fun SignUpScreen(
             }
             
             AnimatedButtonLogin(
-                onClick = onNavigateToHome,
+                onClick = {
+                    if (email.isNotBlank() && password.isNotBlank() && name.isNotBlank()) {
+                        scope.launch {
+                            try {
+                                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                                val ageValue = if (selectedYear.isNotEmpty()) currentYear - selectedYear.toInt() + 1 else 20
+                                val response = NetworkConfig.authApiService.signUp(
+                                    SignupRequest(
+                                        email = email,
+                                        password = password,
+                                        organizationCode = "", // 서버 규격 호환
+                                        name = name,
+                                        nickname = nickname,
+                                        age = ageValue,
+                                        gender = if (selectedGender == "남") "MALE" else "FEMALE"
+                                    )
+                                )
+                                if (response.isSuccessful) {
+                                    Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
+                                    onNavigateToHome()
+                                } else {
+                                    val msg = when(response.code()) {
+                                        409 -> "이미 사용 중인 이메일입니다."
+                                        400 -> "입력 양식을 확인해주세요."
+                                        else -> "회원가입 실패: ${response.code()}"
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
                 text = "가입 완료",
                 backgroundColor = Color(0xFF007AFF)
             )

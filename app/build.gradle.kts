@@ -100,4 +100,8 @@ dependencies {
     // DataStore - 설정값 저장
     implementation(libs.androidx.datastore.preferences)
 
+    // Retrofit & OkHttp
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
+
 }
