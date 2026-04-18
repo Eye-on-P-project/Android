@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.SignupRequest
+import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.repository.SettingsRepository
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +34,7 @@ fun SignUpScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -204,8 +207,21 @@ fun SignUpScreen(
                                     )
                                 )
                                 if (response.isSuccessful) {
-                                    Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
-                                    onNavigateToHome()
+                                    val authBody = response.body()
+                                    if (authBody != null) {
+                                        // 메모리 및 영구 저장소에 토큰 저장
+                                        AppStateRepository.accessToken = authBody.accessToken
+                                        AppStateRepository.userId = authBody.userId
+                                        
+                                        settingsRepository.saveAuthTokens(
+                                            access = authBody.accessToken,
+                                            refresh = authBody.refreshToken,
+                                            uid = authBody.userId.toString()
+                                        )
+                                        
+                                        Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
+                                        onNavigateToHome()
+                                    }
                                 } else {
                                     val msg = when(response.code()) {
                                         409 -> "이미 사용 중인 이메일입니다."

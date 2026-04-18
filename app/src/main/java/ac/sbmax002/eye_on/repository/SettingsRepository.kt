@@ -41,6 +41,40 @@ class SettingsRepository @Inject constructor(
         val FLOATING_ICON_SIZE = stringPreferencesKey("floating_icon_size")
         val VIBRATION_ENABLED = intPreferencesKey("vibration_enabled") // Boolean을 Int로 저장 (0=false, 1=true)
         val DARK_MODE_ENABLED = intPreferencesKey("dark_mode_enabled")
+        
+        // 인증 관련 키
+        val ACCESS_TOKEN = stringPreferencesKey("access_token")
+        val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
+        val USER_ID = stringPreferencesKey("user_id")
+    }
+
+    // 인증 정보
+    val accessToken: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[Keys.ACCESS_TOKEN]
+    }
+
+    val refreshToken: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[Keys.REFRESH_TOKEN]
+    }
+
+    val userId: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[Keys.USER_ID]
+    }
+
+    suspend fun saveAuthTokens(access: String, refresh: String, uid: String) {
+        dataStore.edit { preferences ->
+            preferences[Keys.ACCESS_TOKEN] = access
+            preferences[Keys.REFRESH_TOKEN] = refresh
+            preferences[Keys.USER_ID] = uid
+        }
+    }
+
+    suspend fun clearAuthTokens() {
+        dataStore.edit { preferences ->
+            preferences.remove(Keys.ACCESS_TOKEN)
+            preferences.remove(Keys.REFRESH_TOKEN)
+            preferences.remove(Keys.USER_ID)
+        }
     }
     
     // 졸음 경고 1단계 알림음

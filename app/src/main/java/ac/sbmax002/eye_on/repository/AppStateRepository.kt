@@ -47,6 +47,10 @@ object AppStateRepository {
     // 앱 모드 - 여러 화면에서 공유되는 상태
     private val _appMode = MutableStateFlow<AppMode>(AppMode.DRIVING)
     val appMode: StateFlow<AppMode> = _appMode.asStateFlow()
+
+    // 메모리상의 인증 정보 (Network Interceptor에서 동기적으로 접근하기 위함)
+    var accessToken: String? = null
+    var userId: Long? = null
     
     /**
      * 앱 모드 변경
