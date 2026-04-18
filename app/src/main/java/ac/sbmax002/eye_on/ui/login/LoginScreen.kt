@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.LoginRequest
+import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.repository.SettingsRepository
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -30,11 +32,12 @@ fun LoginScreen(
     onNavigateToSignUp: () -> Unit
 ) {
     val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-    // 어두운 배경색 적용 (기존 앱 테마 유지)
+// 어두운 배경색 적용 (기존 앱 테마 유지)
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF1A1A1A)
@@ -53,9 +56,9 @@ fun LoginScreen(
                 color = Color.White,
                 letterSpacing = (-1).sp
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -73,9 +76,9 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -94,9 +97,7 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true
             )
-            
             Spacer(modifier = Modifier.height(32.dp))
-            
             AnimatedButtonLogin(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank()) {
@@ -104,7 +105,20 @@ fun LoginScreen(
                             try {
                                 val response = NetworkConfig.authApiService.login(LoginRequest(email, password))
                                 if (response.isSuccessful) {
-                                    onNavigateToHome()
+                                    val authBody = response.body()
+                                    if (authBody != null) {
+                                        // 메모리 및 영구 저장소에 토큰 저장
+                                        AppStateRepository.accessToken = authBody.accessToken
+                                        AppStateRepository.userId = authBody.userId
+                                        
+                                        settingsRepository.saveAuthTokens(
+                                            access = authBody.accessToken,
+                                            refresh = authBody.refreshToken,
+                                            uid = authBody.userId.toString()
+                                        )
+                                        
+                                        onNavigateToHome()
+                                    }
                                 } else {
                                     val msg = when(response.code()) {
                                         401 -> "이메일 또는 비밀번호가 틀렸습니다."

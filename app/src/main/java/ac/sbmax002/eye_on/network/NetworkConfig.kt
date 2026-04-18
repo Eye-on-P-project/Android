@@ -1,5 +1,6 @@
 package ac.sbmax002.eye_on.network
 
+import ac.sbmax002.eye_on.repository.AppStateRepository
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -17,11 +18,17 @@ object NetworkConfig {
     // 모든 요청에 공통 헤더를 추가하는 인터셉터
     private val commonHeaderInterceptor = Interceptor { chain ->
         val original = chain.request()
-        val request = original.newBuilder()
+        val requestBuilder = original.newBuilder()
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
-            .build()
-        chain.proceed(request)
+            .header("X-Client-Type", "APP")
+            
+        // 로그인/토큰 갱신 시 발급받은 토큰이 메모리에 있다면 Header에 주입
+        AppStateRepository.accessToken?.let { token ->
+            requestBuilder.header("Authorization", "Bearer $token")
+        }
+
+        chain.proceed(requestBuilder.build())
     }
 
     private val client = OkHttpClient.Builder()
@@ -36,5 +43,9 @@ object NetworkConfig {
 
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
+    }
+
+    val monitoringApiService: MonitoringApiService by lazy {
+        retrofit.create(MonitoringApiService::class.java)
     }
 }

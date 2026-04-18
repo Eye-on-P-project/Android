@@ -19,6 +19,13 @@ import ac.sbmax002.eye_on.DTO.DrowsinessState
 import ac.sbmax002.eye_on.repository.SettingsRepository
 import ac.sbmax002.eye_on.ui.settings.AlarmSound
 import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
+import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.network.NetworkConfig
+import ac.sbmax002.eye_on.network.MonitoringStartRequest
+import ac.sbmax002.eye_on.network.MonitoringEndRequest
+import ac.sbmax002.eye_on.network.MonitoringEventRequest
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,6 +54,11 @@ class MonitoringService : Service(), PipelineListener {
     private var alarmPlayer: AlarmPlayer? = null
     
     private var isMonitoringStarted = false
+    
+    // 서버 연동용 ID 상태 관리
+    private var serverSessionId: Long? = null
+    private var serverEventId: Long? = null
+
     private var currentAlarmLevel: AlarmLevel = AlarmLevel.NONE
     private var level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION
     private var level2AlarmSound: AlarmSound = AlarmSound.SIREN
@@ -188,6 +200,24 @@ class MonitoringService : Service(), PipelineListener {
                 )
                 floatingWindowManager?.showFloatingWindow()
                 
+                // === 서버 세션 시작 로직 ===
+                try {
+                    val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                    val request = MonitoringStartRequest(
+                        mode = AppStateRepository.getCurrentAppMode().name,
+                        startedAtApp = nowStr
+                    )
+                    val response = NetworkConfig.monitoringApiService.startMonitoring(request)
+                    if (response.isSuccessful) {
+                        serverSessionId = response.body()?.sessionId
+                        Log.d(TAG, "Server session started: $serverSessionId")
+                    } else {
+                        Log.e(TAG, "Server session start failed: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error starting server session", e)
+                }
+                
                 Log.d(TAG, "Monitoring started successfully")
                 
             } catch (e: Exception) {
@@ -216,6 +246,28 @@ class MonitoringService : Service(), PipelineListener {
         // 플로팅 윈도우 제거
         floatingWindowManager?.removeFloatingWindow()
         floatingWindowManager = null
+        
+        // === 서버 세션 종료 로직 ===
+        val currentSessionId = serverSessionId
+        if (currentSessionId != null) {
+            serviceScope.launch {
+                try {
+                    val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                    val request = MonitoringEndRequest(endedAtApp = nowStr)
+                    val response = NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Server session ended: $currentSessionId")
+                    } else {
+                        Log.e(TAG, "Failed to end server session: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error ending server session", e)
+                } finally {
+                    serverSessionId = null
+                    serverEventId = null
+                }
+            }
+        }
         
         Log.d(TAG, "Monitoring stopped")
     }
@@ -326,6 +378,9 @@ class MonitoringService : Service(), PipelineListener {
         }
 
         if (targetLevel == AlarmLevel.NONE) {
+            if (currentAlarmLevel != AlarmLevel.NONE) {
+                recordServerEvent(currentAlarmLevel, targetLevel)
+            }
             stopAlarm()
             return
         }
@@ -336,6 +391,10 @@ class MonitoringService : Service(), PipelineListener {
                 AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
                 else -> {}
             }
+            
+            // 서버 이벤트 기록
+            recordServerEvent(currentAlarmLevel, targetLevel)
+            
             currentAlarmLevel = targetLevel
             return
         }
@@ -346,6 +405,51 @@ class MonitoringService : Service(), PipelineListener {
                 AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
                 AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
                 else -> {}
+            }
+        }
+    }
+
+    private fun recordServerEvent(oldLevel: AlarmLevel, newLevel: AlarmLevel) {
+        val sessionId = serverSessionId ?: return
+        serviceScope.launch {
+            try {
+                val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                
+                // 새로운 이벤트 시작 (정상 -> 경고)
+                if (oldLevel == AlarmLevel.NONE && newLevel != AlarmLevel.NONE) {
+                    val eventType = if (newLevel == AlarmLevel.LEVEL2) "SLEEP" else "DROWSY"
+                    val request = MonitoringEventRequest(
+                        eventType = eventType,
+                        occurredAtApp = nowStr
+                    )
+                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    if (response.isSuccessful) {
+                        serverEventId = response.body()?.eventId
+                        Log.d(TAG, "Server event started: $serverEventId")
+                    } else {
+                        Log.e(TAG, "Failed to start server event: ${response.code()}")
+                    }
+                } 
+                // 이벤트 종료 (경고 -> 정상)
+                else if (oldLevel != AlarmLevel.NONE && newLevel == AlarmLevel.NONE) {
+                    val currentEventId = serverEventId
+                    if (currentEventId != null) {
+                        val request = MonitoringEventRequest(
+                            eventType = "NORMAL",
+                            occurredAtApp = nowStr,
+                            eventId = currentEventId
+                        )
+                        val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                        if (response.isSuccessful) {
+                            Log.d(TAG, "Server event ended: $currentEventId")
+                        } else {
+                            Log.e(TAG, "Failed to end server event: ${response.code()}")
+                        }
+                        serverEventId = null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error recording server event", e)
             }
         }
     }
