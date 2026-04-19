@@ -29,8 +29,7 @@ data class MonitoringSessionResponse(
  */
 data class MonitoringEventRequest(
     val eventType: String, // "DROWSY" | "SLEEP" | "NORMAL"
-    val occurredAtApp: String, // yyyy-MM-dd'T'HH:mm:ss
-    val eventId: Long? = null // 이벤트 종료(NORMAL) 시 필수
+    val occurredAtApp: String // yyyy-MM-dd'T'HH:mm:ss
 )
 
 /**
