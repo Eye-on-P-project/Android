@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *     when (appMode) {
  *         AppMode.DRIVING -> { /* 운전 모드 UI */ }
  *         AppMode.STUDY -> { /* 스터디 모드 UI */ }
+ *         AppMode.ORGANIZATION -> { /* 조직 모드 UI */ }
  *     }
  * }
  * ```
@@ -77,4 +78,3 @@ object AppStateRepository {
      * 3. 필요시 setter 함수 추가
      */
 }
-

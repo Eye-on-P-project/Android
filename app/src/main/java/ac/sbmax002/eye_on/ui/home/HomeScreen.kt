@@ -284,21 +284,21 @@ private fun ReadyView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            AnimatedButton(
-                onClick = {
-                    android.util.Log.d("HomeScreen", "Start monitoring button clicked")
-                    onStartMonitoring()
-                },
-                // TODO: MediaPipe 연결 후 isFaceDetected 조건 다시 추가
-                enabled = cameraPermissionGranted && uiState.isReady, // && uiState.isFaceDetected,
-                backgroundColor = if (uiState.appMode == AppMode.STUDY) Color(0xFFFF9800) else Color(0xFF007AFF),
-                disabledBackgroundColor = Color(0xFF424242),
-                text = "모니터링 시작",
-                modifier = Modifier.fillMaxWidth()
-            )
+                AnimatedButton(
+                    onClick = {
+                        android.util.Log.d("HomeScreen", "Start monitoring button clicked")
+                        onStartMonitoring()
+                    },
+                    // TODO: MediaPipe 연결 후 isFaceDetected 조건 다시 추가
+                    enabled = cameraPermissionGranted && uiState.isReady, // && uiState.isFaceDetected,
+                    backgroundColor = appModePrimaryColor(uiState.appMode),
+                    disabledBackgroundColor = Color(0xFF424242),
+                    text = "모니터링 시작",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
             Text(
-                text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
+                text = appModeGuideText(uiState.appMode),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF757575),
@@ -355,7 +355,7 @@ private fun MonitoringView(
                 AnimatedButton(
                     onClick = onSwitchToFloating,
                     enabled = true,
-                    backgroundColor = Color(0xFF007AFF),
+                    backgroundColor = appModePrimaryColor(uiState.appMode),
                     disabledBackgroundColor = Color(0xFF424242),
                     text = "플로팅 모드로 전환",
                     modifier = Modifier.fillMaxWidth()
@@ -371,7 +371,7 @@ private fun MonitoringView(
                 )
 
                 Text(
-                    text = "• 운전 중에 스마트폰을 잘 고정하여 주세요",
+                    text = appModeGuideText(uiState.appMode),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFF757575),
@@ -415,6 +415,18 @@ private fun MonitoringView(
             }
         }
     }
+}
+
+private fun appModePrimaryColor(mode: AppMode): Color = when (mode) {
+    AppMode.DRIVING -> Color(0xFF007AFF)
+    AppMode.STUDY -> Color(0xFFFF9800)
+    AppMode.ORGANIZATION -> Color(0xFF00A86B)
+}
+
+private fun appModeGuideText(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "• 운전 중에 스마트폰을 잘 고정하여 주세요"
+    AppMode.STUDY -> "• 학습 중 화면을 벗어나지 않도록 자세를 유지해 주세요"
+    AppMode.ORGANIZATION -> "• 조직 모드는 팀 운영 가이드에 맞춰 사용해 주세요"
 }
 
 
@@ -522,4 +534,3 @@ private fun StatusIndicator(
         )
     }
 }
-

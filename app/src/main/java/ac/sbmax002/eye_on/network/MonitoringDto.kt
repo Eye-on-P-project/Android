@@ -4,7 +4,7 @@ package ac.sbmax002.eye_on.network
  * 모니터링 세션 시작 요청
  */
 data class MonitoringStartRequest(
-    val mode: String, // "DRIVING" | "STUDY"
+    val mode: String, // "DRIVING" | "STUDY" | "ORGANIZATION"
     val startedAtApp: String // yyyy-MM-dd'T'HH:mm:ss
 )
 

@@ -51,9 +51,9 @@ fun StatisticsScreen(
 
     // 모드에 따른 동적 타이틀 설정
     val title = if (isMonitoring) {
-        if (appMode == AppMode.DRIVING) "실시간 운행 현황" else "실시간 학습 현황"
+        monitoringTitle(appMode)
     } else {
-        if (appMode == AppMode.DRIVING) "운전 리포트" else "집중 리포트"
+        reportTitle(appMode)
     }
 
     Scaffold(
@@ -132,12 +132,9 @@ fun CurrentSessionView(
     }
 
     // 모드별 텍스트 및 색상 설정
-    val isDriving = appMode == AppMode.DRIVING
-    val mainLabel = if (isDriving) "운행 시간" else "학습 시간"
-    val subLabel = if (isDriving) "총 운행 시간" else "총 학습 시간"
-
-    // 운전 모드는 파란색(Blue), 스터디 모드는 주황색(Orange) 테마 사용
-    val themeColor = if (isDriving) Color(0xFF2196F3) else Color(0xFFFF9800)
+    val mainLabel = currentSessionMainLabel(appMode)
+    val subLabel = currentSessionSubLabel(appMode)
+    val themeColor = modeThemeColor(appMode)
     val events = homeUiState.sessionEvents
 
     Column(
@@ -167,12 +164,12 @@ fun CurrentSessionView(
             // 감지 기록 카드
             DashboardCard(title = "감지 기록", icon = Icons.Outlined.Visibility, iconTint = themeColor) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(if(isDriving) "졸음 감지 횟수" else "집중 저하 횟수", color = Color.Gray)
+                    Text(level1CountLabel(appMode), color = Color.Gray)
                     Text("${homeUiState.drowsinessDetectionCount}회", color = Color(0xFFFFC107), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(if(isDriving) "수면 경고 횟수" else "자리 비움 경고", color = Color.Gray)
+                    Text(level2CountLabel(appMode), color = Color.Gray)
                     Text("${homeUiState.sleepDetectionCount}회", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -203,7 +200,7 @@ fun CurrentSessionView(
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text(if(isDriving) "운행 종료" else "학습 종료", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stopButtonLabel(appMode), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -224,11 +221,9 @@ fun HistoryListView(
     }
 
     // 모드에 따른 UI 분기
-    val isDriving = uiState.appMode == AppMode.DRIVING
-    val themeColor = if (isDriving) Color(0xFF2196F3) else Color(0xFFFF9800)
-
-    val timeTitle = if (isDriving) "총 운행 시간" else "총 학습 시간"
-    val sessionLabel = if (isDriving) "운전 모드" else "스터디 모드"
+    val themeColor = modeThemeColor(uiState.appMode)
+    val timeTitle = historyTotalTimeTitle(uiState.appMode)
+    val sessionLabel = sessionModeLabel(uiState.appMode)
 
     Column(
         modifier = Modifier
@@ -311,7 +306,7 @@ fun HistoryListView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 4. 졸음/집중 감지 현황 카드
-        DashboardCard(title = if(isDriving) "졸음 감지" else "집중 저하 감지", icon = Icons.Outlined.Visibility, iconTint = themeColor) {
+        DashboardCard(title = detectionSummaryTitle(uiState.appMode), icon = Icons.Outlined.Visibility, iconTint = themeColor) {
             val totalAlerts = (uiState.level1Total + uiState.level2Total).coerceAtLeast(1)
             val lvl1Ratio = uiState.level1Total.toFloat() / totalAlerts
             val lvl2Ratio = uiState.level2Total.toFloat() / totalAlerts
@@ -325,7 +320,7 @@ fun HistoryListView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(if(isDriving) "졸음 감지 횟수" else "주의 산만", color = Color.Gray, fontSize = 14.sp)
+                Text(level1CountLabel(uiState.appMode), color = Color.Gray, fontSize = 14.sp)
                 Text("${uiState.level1Total}회", color = Color(0xFFFFC107), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -345,7 +340,7 @@ fun HistoryListView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(if(isDriving) "수면 경고 횟수" else "자리 비움", color = Color.Gray, fontSize = 14.sp)
+                Text(level2CountLabel(uiState.appMode), color = Color.Gray, fontSize = 14.sp)
                 Text("${uiState.level2Total}회", color = Color(0xFFE53935), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -361,7 +356,7 @@ fun HistoryListView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 5. 시간대별 빈도
-        DashboardCard(title = if(isDriving) "시간대별 졸음 빈도" else "시간대별 집중 저하", icon = null, iconTint = null) {
+        DashboardCard(title = timeFrequencyTitle(uiState.appMode), icon = null, iconTint = null) {
             val maxCount = uiState.timeDistribution.maxOrNull()?.coerceAtLeast(1) ?: 1
 
             TimeFrequencyRow(label = "오전 (06:00-12:00)", count = uiState.timeDistribution[0], max = maxCount, color = themeColor)
@@ -390,7 +385,7 @@ fun HistoryListView(
                 sessions.forEach { session ->
                     SessionListItem(
                         session = session,
-                        isDriving = isDriving,
+                        appMode = uiState.appMode,
                         accentColor = themeColor,
                         onClick = { onNavigateToDetail(session.id) }
                     )
@@ -398,6 +393,90 @@ fun HistoryListView(
             }
         }
     }
+}
+
+private fun modeThemeColor(mode: AppMode): Color = when (mode) {
+    AppMode.DRIVING -> Color(0xFF2196F3)
+    AppMode.STUDY -> Color(0xFFFF9800)
+    AppMode.ORGANIZATION -> Color(0xFF00A86B)
+}
+
+private fun monitoringTitle(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "실시간 운행 현황"
+    AppMode.STUDY -> "실시간 학습 현황"
+    AppMode.ORGANIZATION -> "실시간 조직 모니터링"
+}
+
+private fun reportTitle(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "운전 리포트"
+    AppMode.STUDY -> "집중 리포트"
+    AppMode.ORGANIZATION -> "조직 리포트"
+}
+
+private fun currentSessionMainLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "운행 시간"
+    AppMode.STUDY -> "학습 시간"
+    AppMode.ORGANIZATION -> "모니터링 시간"
+}
+
+private fun currentSessionSubLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "총 운행 시간"
+    AppMode.STUDY -> "총 학습 시간"
+    AppMode.ORGANIZATION -> "총 모니터링 시간"
+}
+
+private fun historyTotalTimeTitle(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "총 운행 시간"
+    AppMode.STUDY -> "총 학습 시간"
+    AppMode.ORGANIZATION -> "총 모니터링 시간"
+}
+
+private fun detectionSummaryTitle(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "졸음 감지"
+    AppMode.STUDY -> "집중 저하 감지"
+    AppMode.ORGANIZATION -> "이상 상태 감지"
+}
+
+private fun level1CountLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "졸음 감지 횟수"
+    AppMode.STUDY -> "집중 저하 횟수"
+    AppMode.ORGANIZATION -> "주의 알림 횟수"
+}
+
+private fun level2CountLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "수면 경고 횟수"
+    AppMode.STUDY -> "자리 비움 경고"
+    AppMode.ORGANIZATION -> "긴급 경고 횟수"
+}
+
+private fun level1ShortLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "졸음"
+    AppMode.STUDY -> "주의"
+    AppMode.ORGANIZATION -> "주의"
+}
+
+private fun level2ShortLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "수면"
+    AppMode.STUDY -> "자리"
+    AppMode.ORGANIZATION -> "긴급"
+}
+
+private fun timeFrequencyTitle(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "시간대별 졸음 빈도"
+    AppMode.STUDY -> "시간대별 집중 저하"
+    AppMode.ORGANIZATION -> "시간대별 이상 빈도"
+}
+
+private fun sessionModeLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "운전 모드"
+    AppMode.STUDY -> "스터디 모드"
+    AppMode.ORGANIZATION -> "조직 모드"
+}
+
+private fun stopButtonLabel(mode: AppMode): String = when (mode) {
+    AppMode.DRIVING -> "운행 종료"
+    AppMode.STUDY -> "학습 종료"
+    AppMode.ORGANIZATION -> "모니터링 종료"
 }
 
 // [UI Components] 공통 카드 디자인
@@ -437,7 +516,7 @@ fun DashboardCard(
 @Composable
 fun SessionListItem(
     session: DrivingSession,
-    isDriving: Boolean,
+    appMode: AppMode,
     accentColor: Color,
     onClick: () -> Unit
 ) {
@@ -460,7 +539,7 @@ fun SessionListItem(
                     Text("${session.time}부터 • ${session.durationStr} 동안", color = Color.Gray, fontSize = 14.sp)
                 }
                 Text(
-                    text = if (isDriving) "운전 모드" else "스터디 모드",
+                    text = sessionModeLabel(appMode),
                     color = accentColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -479,8 +558,8 @@ fun SessionListItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AlertBadge(text = if (isDriving) "졸음" else "주의", value = session.level1Alerts, color = Color(0xFFFFC107))
-                    AlertBadge(text = if (isDriving) "수면" else "자리", value = session.level2Alerts, color = Color(0xFFE53935))
+                    AlertBadge(text = level1ShortLabel(appMode), value = session.level1Alerts, color = Color(0xFFFFC107))
+                    AlertBadge(text = level2ShortLabel(appMode), value = session.level2Alerts, color = Color(0xFFE53935))
                 }
 
                 Text(
