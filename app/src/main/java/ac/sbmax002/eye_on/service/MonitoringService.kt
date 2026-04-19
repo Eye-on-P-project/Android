@@ -24,8 +24,10 @@ import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.MonitoringStartRequest
 import ac.sbmax002.eye_on.network.MonitoringEndRequest
 import ac.sbmax002.eye_on.network.MonitoringEventRequest
+import ac.sbmax002.eye_on.network.TokenRequest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
+import retrofit2.Response
 
 /**
  * 모니터링을 관리하는 Foreground Service
@@ -98,8 +101,9 @@ class MonitoringService : Service(), PipelineListener {
                 startMonitoring()
             }
             ACTION_STOP_MONITORING -> {
-                stopMonitoring()
-                stopSelf()
+                stopMonitoring {
+                    stopSelf()
+                }
             }
             ACTION_ACK_WAKE -> {
                 acknowledgeWake()
@@ -124,8 +128,7 @@ class MonitoringService : Service(), PipelineListener {
         serviceScope.launch {
             try {
                 // SettingsRepository 초기화 (Hilt 없이 직접 생성)
-                settingsRepository = SettingsRepository(applicationContext)
-                val settingsRepo = settingsRepository!!
+                val settingsRepo = ensureSettingsRepository()
                 val initialSensitivity = settingsRepo.drowsinessSensitivity.first()
                 val initialLevel1Sound = settingsRepo.level1AlarmSound.first()
                 val initialLevel2Sound = settingsRepo.level2AlarmSound.first()
@@ -201,17 +204,19 @@ class MonitoringService : Service(), PipelineListener {
                 
                 // === 서버 세션 시작 로직 ===
                 try {
-                    val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                    val nowStr = currentKstTimestampString()
                     val request = MonitoringStartRequest(
                         mode = AppStateRepository.getCurrentAppMode().name,
                         startedAtApp = nowStr
                     )
-                    val response = NetworkConfig.monitoringApiService.startMonitoring(request)
-                    if (response.isSuccessful) {
+                    val response = executeWithAuthRetry("start monitoring session") {
+                        NetworkConfig.monitoringApiService.startMonitoring(request)
+                    }
+                    if (response != null && response.isSuccessful) {
                         serverSessionId = response.body()?.sessionId
                         Log.d(TAG, "Server session started: $serverSessionId")
                     } else {
-                        Log.e(TAG, "Server session start failed: ${response.code()}")
+                        logHttpFailure("Failed to start server session", response)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error starting server session", e)
@@ -228,7 +233,7 @@ class MonitoringService : Service(), PipelineListener {
     /**
      * 모니터링 중지
      */
-    private fun stopMonitoring() {
+    private fun stopMonitoring(onFinished: (() -> Unit)? = null) {
         Log.d(TAG, "Stopping monitoring...")
         
         isMonitoringStarted = false
@@ -248,23 +253,28 @@ class MonitoringService : Service(), PipelineListener {
         
         // === 서버 세션 종료 로직 ===
         val currentSessionId = serverSessionId
+        serverSessionId = null
         if (currentSessionId != null) {
             serviceScope.launch {
                 try {
-                    val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                    val nowStr = currentKstTimestampString()
                     val request = MonitoringEndRequest(endedAtApp = nowStr)
-                    val response = NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
-                    if (response.isSuccessful) {
+                    val response = executeWithAuthRetry("end monitoring session") {
+                        NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
+                    }
+                    if (response != null && response.isSuccessful) {
                         Log.d(TAG, "Server session ended: $currentSessionId")
                     } else {
-                        Log.e(TAG, "Failed to end server session: ${response.code()}")
+                        logHttpFailure("Failed to end server session", response)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error ending server session", e)
                 } finally {
-                    serverSessionId = null
+                    onFinished?.invoke()
                 }
             }
+        } else {
+            onFinished?.invoke()
         }
         
         Log.d(TAG, "Monitoring stopped")
@@ -413,7 +423,7 @@ class MonitoringService : Service(), PipelineListener {
 
         serviceScope.launch {
             try {
-                val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                val nowStr = currentKstTimestampString()
 
                 // 경고 단계 변화 (정상->경고, 졸음<->수면)는 모두 상태 이벤트를 서버에 기록한다.
                 if (newLevel != AlarmLevel.NONE) {
@@ -422,11 +432,13 @@ class MonitoringService : Service(), PipelineListener {
                         eventType = eventType,
                         occurredAtApp = nowStr
                     )
-                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
-                    if (response.isSuccessful) {
+                    val response = executeWithAuthRetry("record monitoring event($eventType)") {
+                        NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    }
+                    if (response != null && response.isSuccessful) {
                         Log.d(TAG, "Server event recorded: $eventType ($oldLevel -> $newLevel)")
                     } else {
-                        Log.e(TAG, "Failed to record server event($eventType): ${response.code()}")
+                        logHttpFailure("Failed to record server event($eventType)", response)
                     }
                 }
                 // 이벤트 종료 (경고 -> 정상)
@@ -435,16 +447,98 @@ class MonitoringService : Service(), PipelineListener {
                         eventType = "NORMAL",
                         occurredAtApp = nowStr
                     )
-                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
-                    if (response.isSuccessful) {
+                    val response = executeWithAuthRetry("record monitoring event(NORMAL)") {
+                        NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    }
+                    if (response != null && response.isSuccessful) {
                         Log.d(TAG, "Server event recorded: NORMAL ($oldLevel -> $newLevel)")
                     } else {
-                        Log.e(TAG, "Failed to record server event(NORMAL): ${response.code()}")
+                        logHttpFailure("Failed to record server event(NORMAL)", response)
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error recording server event", e)
             }
+        }
+    }
+
+    private fun ensureSettingsRepository(): SettingsRepository {
+        return settingsRepository ?: SettingsRepository(applicationContext).also {
+            settingsRepository = it
+        }
+    }
+
+    private suspend fun tryRefreshAccessToken(): Boolean {
+        val settingsRepo = ensureSettingsRepository()
+        val refreshToken = settingsRepo.refreshToken.first()
+
+        if (refreshToken.isNullOrBlank()) {
+            Log.e(TAG, "Cannot refresh access token: refresh token is empty")
+            return false
+        }
+
+        return try {
+            val refreshResponse = NetworkConfig.authApiService.refresh(TokenRequest(refreshToken))
+            if (!refreshResponse.isSuccessful) {
+                logHttpFailure("Auth refresh failed", refreshResponse)
+                false
+            } else {
+                val authBody = refreshResponse.body()
+                if (authBody == null) {
+                    Log.e(TAG, "Auth refresh failed: empty body")
+                    false
+                } else {
+                    AppStateRepository.accessToken = authBody.accessToken
+                    AppStateRepository.userId = authBody.userId
+                    settingsRepo.saveAuthTokens(
+                        access = authBody.accessToken,
+                        refresh = authBody.refreshToken,
+                        uid = authBody.userId.toString()
+                    )
+                    Log.d(TAG, "Access token refreshed successfully")
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while refreshing access token", e)
+            false
+        }
+    }
+
+    private suspend fun <T> executeWithAuthRetry(
+        requestName: String,
+        block: suspend () -> Response<T>
+    ): Response<T>? {
+        val initialResponse = block()
+        if (initialResponse.code() != 401) {
+            return initialResponse
+        }
+
+        Log.w(TAG, "$requestName got 401, trying access token refresh")
+        val refreshed = tryRefreshAccessToken()
+        if (!refreshed) {
+            return initialResponse
+        }
+
+        val retriedResponse = block()
+        if (retriedResponse.code() == 401) {
+            Log.e(TAG, "$requestName is still unauthorized after refresh")
+        }
+        return retriedResponse
+    }
+
+    private fun logHttpFailure(prefix: String, response: Response<*>?) {
+        if (response == null) {
+            Log.e(TAG, "$prefix: no response")
+            return
+        }
+        val errorBodyText = runCatching { response.errorBody()?.string() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+        if (errorBodyText != null) {
+            Log.e(TAG, "$prefix: ${response.code()} - $errorBodyText")
+        } else {
+            Log.e(TAG, "$prefix: ${response.code()}")
         }
     }
 
@@ -477,6 +571,10 @@ class MonitoringService : Service(), PipelineListener {
         pipelineResultListener?.invoke(normalized)
     }
 
+    private fun currentKstTimestampString(): String {
+        return LocalDateTime.now(KST_ZONE_ID).format(APP_TIME_FORMATTER)
+    }
+
     private data class SettingsSnapshot(
         val sensitivity: DrowsinessSensitivity,
         val level1Sound: AlarmSound,
@@ -493,6 +591,8 @@ class MonitoringService : Service(), PipelineListener {
         private const val CHANNEL_ID = "monitoring_channel"
         private const val CHANNEL_NAME = "모니터링"
         private const val CHANNEL_DESCRIPTION = "졸음 감지 모니터링 중"
+        private val APP_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+        private val KST_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
         
         const val ACTION_START_MONITORING = "ac.sbmax002.eye_on.START_MONITORING"
         const val ACTION_STOP_MONITORING = "ac.sbmax002.eye_on.STOP_MONITORING"
