@@ -19,9 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import ac.sbmax002.eye_on.database.AppDatabase
 import ac.sbmax002.eye_on.model.statistics.BatteryUsageTracker
+import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.repository.SettingsRepository
 import ac.sbmax002.eye_on.repository.StatisticsRepository
 import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.ui.home.CameraPermissionHandler
@@ -32,6 +34,8 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModelFactory
 import ac.sbmax002.eye_on.ui.theme.EyeOnTheme
 import ac.sbmax002.eye_on.navigation.EyeOnApp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -89,6 +93,7 @@ class MainActivity : ComponentActivity() {
         
         super.onCreate(savedInstanceState)
 
+        restoreAuthStateFromStorage()
         // Service 바인딩
         bindMonitoringService()
 
@@ -150,6 +155,18 @@ class MainActivity : ComponentActivity() {
     private fun bindMonitoringService() {
         val intent = Intent(this, MonitoringService::class.java)
         bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+    }
+
+    private fun restoreAuthStateFromStorage() {
+        val settingsRepository = SettingsRepository(applicationContext)
+        lifecycleScope.launch {
+            val accessToken = settingsRepository.accessToken.first()
+            val userId = settingsRepository.userId.first()?.toLongOrNull()
+
+            AppStateRepository.accessToken = accessToken
+            AppStateRepository.userId = userId
+            Log.d(TAG, "Auth state restored: hasAccessToken=${!accessToken.isNullOrBlank()}, userId=$userId")
+        }
     }
 
     companion object {
