@@ -4,7 +4,7 @@ package ac.sbmax002.eye_on.network
  * 모니터링 세션 시작 요청
  */
 data class MonitoringStartRequest(
-    val mode: String, // "DRIVING" | "STUDY"
+    val mode: String, // "DRIVING" | "STUDY" | "ORGANIZATION"
     val startedAtApp: String // yyyy-MM-dd'T'HH:mm:ss
 )
 
@@ -29,8 +29,7 @@ data class MonitoringSessionResponse(
  */
 data class MonitoringEventRequest(
     val eventType: String, // "DROWSY" | "SLEEP" | "NORMAL"
-    val occurredAtApp: String, // yyyy-MM-dd'T'HH:mm:ss
-    val eventId: Long? = null // 이벤트 종료(NORMAL) 시 필수
+    val occurredAtApp: String // yyyy-MM-dd'T'HH:mm:ss
 )
 
 /**

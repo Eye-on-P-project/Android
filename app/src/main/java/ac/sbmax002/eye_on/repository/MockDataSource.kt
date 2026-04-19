@@ -63,12 +63,12 @@ object MockDataSource {
         val lvl1 = Random.nextInt(0, 8)
         val lvl2 = Random.nextInt(0, 3)
 
-        val randomMode = if (Random.nextBoolean()) AppMode.DRIVING else AppMode.STUDY
+        val randomMode = AppMode.entries.random()
 
-        val finalLocation = if (randomMode == AppMode.STUDY) {
-            listOf("Library", "Cafe", "Home", "Study Room", "School").random()
-        } else {
-            locations.random()
+        val finalLocation = when (randomMode) {
+            AppMode.DRIVING -> locations.random()
+            AppMode.STUDY -> listOf("Library", "Cafe", "Home", "Study Room", "School").random()
+            AppMode.ORGANIZATION -> listOf("HQ", "Branch Office", "Meeting Room", "Workstation", "On-site").random()
         }
 
         // 세션 생성 (events 필드 제거됨)
@@ -102,10 +102,10 @@ object MockDataSource {
         val eventTime = startTime.plusMinutes(Random.nextLong(1, maxDurationMin.toLong()))
         val durationSec = Random.nextInt(2, 10)
 
-        val message = if (mode == AppMode.DRIVING) {
-            if (level == 1) "Drowsiness detected" else "Sleep warning"
-        } else {
-            if (level == 1) "Distraction detected" else "Away from seat"
+        val message = when (mode) {
+            AppMode.DRIVING -> if (level == 1) "Drowsiness detected" else "Sleep warning"
+            AppMode.STUDY -> if (level == 1) "Distraction detected" else "Away from seat"
+            AppMode.ORGANIZATION -> if (level == 1) "Attention warning" else "Critical alert"
         }
 
         return SessionEvent(

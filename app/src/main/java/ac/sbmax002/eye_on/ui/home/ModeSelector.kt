@@ -51,6 +51,14 @@ fun ModeSelector(
             onClick = { onModeSelected(AppMode.STUDY) },
             modifier = Modifier.weight(1f)
         )
+
+        ModeButton(
+            mode = AppMode.ORGANIZATION,
+            label = "조직 모드",
+            isSelected = selectedMode == AppMode.ORGANIZATION,
+            onClick = { onModeSelected(AppMode.ORGANIZATION) },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -65,6 +73,7 @@ private fun ModeButton(
     val selectedGradient = when (mode) {
         AppMode.DRIVING -> listOf(Color(0xFF007AFF), Color(0xFF0051D5))
         AppMode.STUDY -> listOf(Color(0xFFFF9800), Color(0xFFF57C00))
+        AppMode.ORGANIZATION -> listOf(Color(0xFF00A86B), Color(0xFF007A4D))
     }
 
     Box(
@@ -101,4 +110,3 @@ private fun ModeButton(
         )
     }
 }
-

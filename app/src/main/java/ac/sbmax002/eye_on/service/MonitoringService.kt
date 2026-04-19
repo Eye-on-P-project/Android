@@ -55,9 +55,8 @@ class MonitoringService : Service(), PipelineListener {
     
     private var isMonitoringStarted = false
     
-    // 서버 연동용 ID 상태 관리
+    // 서버 연동용 세션 ID
     private var serverSessionId: Long? = null
-    private var serverEventId: Long? = null
 
     private var currentAlarmLevel: AlarmLevel = AlarmLevel.NONE
     private var level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION
@@ -264,7 +263,6 @@ class MonitoringService : Service(), PipelineListener {
                     Log.e(TAG, "Error ending server session", e)
                 } finally {
                     serverSessionId = null
-                    serverEventId = null
                 }
             }
         }
@@ -411,12 +409,14 @@ class MonitoringService : Service(), PipelineListener {
 
     private fun recordServerEvent(oldLevel: AlarmLevel, newLevel: AlarmLevel) {
         val sessionId = serverSessionId ?: return
+        if (oldLevel == newLevel) return
+
         serviceScope.launch {
             try {
                 val nowStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
-                
-                // 새로운 이벤트 시작 (정상 -> 경고)
-                if (oldLevel == AlarmLevel.NONE && newLevel != AlarmLevel.NONE) {
+
+                // 경고 단계 변화 (정상->경고, 졸음<->수면)는 모두 상태 이벤트를 서버에 기록한다.
+                if (newLevel != AlarmLevel.NONE) {
                     val eventType = if (newLevel == AlarmLevel.LEVEL2) "SLEEP" else "DROWSY"
                     val request = MonitoringEventRequest(
                         eventType = eventType,
@@ -424,28 +424,22 @@ class MonitoringService : Service(), PipelineListener {
                     )
                     val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
                     if (response.isSuccessful) {
-                        serverEventId = response.body()?.eventId
-                        Log.d(TAG, "Server event started: $serverEventId")
+                        Log.d(TAG, "Server event recorded: $eventType ($oldLevel -> $newLevel)")
                     } else {
-                        Log.e(TAG, "Failed to start server event: ${response.code()}")
+                        Log.e(TAG, "Failed to record server event($eventType): ${response.code()}")
                     }
-                } 
+                }
                 // 이벤트 종료 (경고 -> 정상)
                 else if (oldLevel != AlarmLevel.NONE && newLevel == AlarmLevel.NONE) {
-                    val currentEventId = serverEventId
-                    if (currentEventId != null) {
-                        val request = MonitoringEventRequest(
-                            eventType = "NORMAL",
-                            occurredAtApp = nowStr,
-                            eventId = currentEventId
-                        )
-                        val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
-                        if (response.isSuccessful) {
-                            Log.d(TAG, "Server event ended: $currentEventId")
-                        } else {
-                            Log.e(TAG, "Failed to end server event: ${response.code()}")
-                        }
-                        serverEventId = null
+                    val request = MonitoringEventRequest(
+                        eventType = "NORMAL",
+                        occurredAtApp = nowStr
+                    )
+                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Server event recorded: NORMAL ($oldLevel -> $newLevel)")
+                    } else {
+                        Log.e(TAG, "Failed to record server event(NORMAL): ${response.code()}")
                     }
                 }
             } catch (e: Exception) {
@@ -535,4 +529,3 @@ class MonitoringService : Service(), PipelineListener {
         }
     }
 }
-
