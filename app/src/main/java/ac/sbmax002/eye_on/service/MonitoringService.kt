@@ -27,7 +27,7 @@ import ac.sbmax002.eye_on.network.MonitoringEventRequest
 import ac.sbmax002.eye_on.network.TokenRequest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.ZoneOffset
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -204,7 +204,7 @@ class MonitoringService : Service(), PipelineListener {
                 
                 // === 서버 세션 시작 로직 ===
                 try {
-                    val nowStr = currentUtcTimestampString()
+                    val nowStr = currentKstTimestampString()
                     val request = MonitoringStartRequest(
                         mode = AppStateRepository.getCurrentAppMode().name,
                         startedAtApp = nowStr
@@ -257,7 +257,7 @@ class MonitoringService : Service(), PipelineListener {
         if (currentSessionId != null) {
             serviceScope.launch {
                 try {
-                    val nowStr = currentUtcTimestampString()
+                    val nowStr = currentKstTimestampString()
                     val request = MonitoringEndRequest(endedAtApp = nowStr)
                     val response = executeWithAuthRetry("end monitoring session") {
                         NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
@@ -423,7 +423,7 @@ class MonitoringService : Service(), PipelineListener {
 
         serviceScope.launch {
             try {
-                val nowStr = currentUtcTimestampString()
+                val nowStr = currentKstTimestampString()
 
                 // 경고 단계 변화 (정상->경고, 졸음<->수면)는 모두 상태 이벤트를 서버에 기록한다.
                 if (newLevel != AlarmLevel.NONE) {
@@ -571,8 +571,8 @@ class MonitoringService : Service(), PipelineListener {
         pipelineResultListener?.invoke(normalized)
     }
 
-    private fun currentUtcTimestampString(): String {
-        return LocalDateTime.now(ZoneOffset.UTC).format(APP_TIME_FORMATTER)
+    private fun currentKstTimestampString(): String {
+        return LocalDateTime.now(KST_ZONE_ID).format(APP_TIME_FORMATTER)
     }
 
     private data class SettingsSnapshot(
@@ -592,6 +592,7 @@ class MonitoringService : Service(), PipelineListener {
         private const val CHANNEL_NAME = "모니터링"
         private const val CHANNEL_DESCRIPTION = "졸음 감지 모니터링 중"
         private val APP_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+        private val KST_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
         
         const val ACTION_START_MONITORING = "ac.sbmax002.eye_on.START_MONITORING"
         const val ACTION_STOP_MONITORING = "ac.sbmax002.eye_on.STOP_MONITORING"
