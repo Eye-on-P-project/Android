@@ -13,7 +13,7 @@ object NetworkConfig {
     /**
      * 백엔드 서버의 기본 URL
      */
-    const val BASE_URL = "http://localhost:8080"
+    const val BASE_URL = "https://api.eyeon.company"
 
     // 모든 요청에 공통 헤더를 추가하는 인터셉터
     private val commonHeaderInterceptor = Interceptor { chain ->
