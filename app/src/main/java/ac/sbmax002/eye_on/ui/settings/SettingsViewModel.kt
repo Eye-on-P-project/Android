@@ -3,6 +3,7 @@ package ac.sbmax002.eye_on.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ac.sbmax002.eye_on.repository.SettingsRepository
+import ac.sbmax002.eye_on.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
     
     /**
@@ -191,7 +193,7 @@ class SettingsViewModel @Inject constructor(
     fun logout(onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                val refreshToken = settingsRepository.refreshToken.first()
+                val refreshToken = authRepository.getRefreshToken()
                 if (refreshToken != null) {
                     ac.sbmax002.eye_on.network.NetworkConfig.authApiService.logout(
                         ac.sbmax002.eye_on.network.TokenRequest(refreshToken)
@@ -201,7 +203,7 @@ class SettingsViewModel @Inject constructor(
                 // 네트워크 오류 등으로 로그아웃 실패해도 로컬에서는 로그아웃 처리
                 e.printStackTrace()
             } finally {
-                settingsRepository.clearAuthTokens()
+                authRepository.clearAuthTokens()
                 ac.sbmax002.eye_on.repository.AppStateRepository.accessToken = null
                 ac.sbmax002.eye_on.repository.AppStateRepository.userId = null
                 

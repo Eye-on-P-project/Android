@@ -24,9 +24,11 @@ object NetworkConfig {
     const val BASE_URL = "https://api.eyeon.company"
 
     private var settingsRepository: SettingsRepository? = null
+    private var authRepository: ac.sbmax002.eye_on.repository.AuthRepository? = null
 
     fun initialize(context: Context) {
         settingsRepository = SettingsRepository(context)
+        authRepository = ac.sbmax002.eye_on.repository.AuthRepository(context)
     }
 
     // 모든 요청에 공통 헤더를 추가하는 인터셉터
@@ -50,8 +52,8 @@ object NetworkConfig {
             // 401 에러 발생 시 토큰 갱신 시도
             if (response.code() == 401) {
                 return runBlocking {
-                    val repo = settingsRepository ?: return@runBlocking null
-                    val refreshToken = repo.refreshToken.first() ?: return@runBlocking null
+                    val repo = authRepository ?: return@runBlocking null
+                    val refreshToken = repo.getRefreshToken() ?: return@runBlocking null
                     
                     try {
                         val authApiService = Retrofit.Builder()

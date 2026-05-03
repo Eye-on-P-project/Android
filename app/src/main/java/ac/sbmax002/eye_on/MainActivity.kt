@@ -101,11 +101,11 @@ class MainActivity : ComponentActivity() {
         // Service 바인딩
         bindMonitoringService()
 
-        val settingsRepository = SettingsRepository(applicationContext)
+        val authRepository = ac.sbmax002.eye_on.repository.AuthRepository(applicationContext)
         lifecycleScope.launch {
-            val accessToken = settingsRepository.accessToken.first()
-            val refreshToken = settingsRepository.refreshToken.first()
-            val userId = settingsRepository.userId.first()?.toLongOrNull()
+            val accessToken = authRepository.getAccessToken()
+            val refreshToken = authRepository.getRefreshToken()
+            val userId = authRepository.getUserId()?.toLongOrNull()
 
             AppStateRepository.accessToken = accessToken
             AppStateRepository.userId = userId
@@ -193,10 +193,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreAuthStateFromStorage() {
-        val settingsRepository = SettingsRepository(applicationContext)
+        val authRepository = ac.sbmax002.eye_on.repository.AuthRepository(applicationContext)
         lifecycleScope.launch {
-            val accessToken = settingsRepository.accessToken.first()
-            val userId = settingsRepository.userId.first()?.toLongOrNull()
+            val accessToken = authRepository.getAccessToken()
+            val userId = authRepository.getUserId()?.toLongOrNull()
 
             AppStateRepository.accessToken = accessToken
             AppStateRepository.userId = userId

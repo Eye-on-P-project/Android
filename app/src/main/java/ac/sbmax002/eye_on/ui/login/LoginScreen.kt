@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.LoginRequest
 import ac.sbmax002.eye_on.repository.AppStateRepository
-import ac.sbmax002.eye_on.repository.SettingsRepository
+import ac.sbmax002.eye_on.repository.AuthRepository
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -32,7 +32,7 @@ fun LoginScreen(
     onNavigateToSignUp: () -> Unit
 ) {
     val context = LocalContext.current
-    val settingsRepository = remember { SettingsRepository(context) }
+    val authRepository = remember { AuthRepository(context) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -111,7 +111,7 @@ fun LoginScreen(
                                         AppStateRepository.accessToken = authBody.accessToken
                                         AppStateRepository.userId = authBody.userId
                                         
-                                        settingsRepository.saveAuthTokens(
+                                        authRepository.saveAuthTokens(
                                             access = authBody.accessToken,
                                             refresh = authBody.refreshToken,
                                             uid = authBody.userId.toString()
