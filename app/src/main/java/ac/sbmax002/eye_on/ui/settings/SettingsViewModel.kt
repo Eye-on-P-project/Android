@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -181,6 +182,33 @@ class SettingsViewModel @Inject constructor(
         // DataStore에 저장
         viewModelScope.launch {
             settingsRepository.saveDarkModeEnabled(newValue)
+        }
+    }
+
+    /**
+     * 로그아웃
+     */
+    fun logout(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val refreshToken = settingsRepository.refreshToken.first()
+                if (refreshToken != null) {
+                    ac.sbmax002.eye_on.network.NetworkConfig.authApiService.logout(
+                        ac.sbmax002.eye_on.network.TokenRequest(refreshToken)
+                    )
+                }
+            } catch (e: Exception) {
+                // 네트워크 오류 등으로 로그아웃 실패해도 로컬에서는 로그아웃 처리
+                e.printStackTrace()
+            } finally {
+                settingsRepository.clearAuthTokens()
+                ac.sbmax002.eye_on.repository.AppStateRepository.accessToken = null
+                ac.sbmax002.eye_on.repository.AppStateRepository.userId = null
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onSuccess()
+                }
+            }
         }
     }
 }

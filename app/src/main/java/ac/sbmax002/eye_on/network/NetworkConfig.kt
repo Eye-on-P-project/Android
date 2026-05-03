@@ -1,8 +1,16 @@
 package ac.sbmax002.eye_on.network
 
+import android.content.Context
 import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.repository.SettingsRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response as OkHttpResponse
+import okhttp3.Route
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -14,6 +22,12 @@ object NetworkConfig {
      * 백엔드 서버의 기본 URL
      */
     const val BASE_URL = "https://api.eyeon.company"
+
+    private var settingsRepository: SettingsRepository? = null
+
+    fun initialize(context: Context) {
+        settingsRepository = SettingsRepository(context)
+    }
 
     // 모든 요청에 공통 헤더를 추가하는 인터셉터
     private val commonHeaderInterceptor = Interceptor { chain ->
@@ -31,8 +45,60 @@ object NetworkConfig {
         chain.proceed(requestBuilder.build())
     }
 
+    private val tokenAuthenticator = object : Authenticator {
+        override fun authenticate(route: Route?, response: OkHttpResponse): Request? {
+            // 401 에러 발생 시 토큰 갱신 시도
+            if (response.code() == 401) {
+                return runBlocking {
+                    val repo = settingsRepository ?: return@runBlocking null
+                    val refreshToken = repo.refreshToken.first() ?: return@runBlocking null
+                    
+                    try {
+                        val authApiService = Retrofit.Builder()
+                            .baseUrl(BASE_URL)
+                            .addConverterFactory(GsonConverterFactory.create())
+                            .build()
+                            .create(AuthApiService::class.java)
+
+                        val refreshResponse = authApiService.refresh(TokenRequest(refreshToken))
+                        
+                        if (refreshResponse.isSuccessful) {
+                            val newTokens = refreshResponse.body()
+                            if (newTokens != null) {
+                                // 새 토큰 저장
+                                repo.saveAuthTokens(
+                                    access = newTokens.accessToken,
+                                    refresh = newTokens.refreshToken,
+                                    uid = newTokens.userId.toString()
+                                )
+                                AppStateRepository.accessToken = newTokens.accessToken
+                                AppStateRepository.userId = newTokens.userId
+                                
+                                // 기존 요청 재시도
+                                return@runBlocking response.request().newBuilder()
+                                    .removeHeader("Authorization")
+                                    .addHeader("Authorization", "Bearer ${newTokens.accessToken}")
+                                    .build()
+                            }
+                        } else {
+                            // 토큰 갱신 실패 시 로그아웃 처리
+                            repo.clearAuthTokens()
+                            AppStateRepository.accessToken = null
+                            AppStateRepository.userId = null
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    null
+                }
+            }
+            return null
+        }
+    }
+
     private val client = OkHttpClient.Builder()
         .addInterceptor(commonHeaderInterceptor)
+        .authenticator(tokenAuthenticator)
         .build()
 
     val retrofit: Retrofit = Retrofit.Builder()
