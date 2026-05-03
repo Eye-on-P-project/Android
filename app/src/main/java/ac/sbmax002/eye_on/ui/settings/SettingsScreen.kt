@@ -32,7 +32,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToLevel1Alert: () -> Unit = {},
-    onNavigateToLevel2Alert: () -> Unit = {}
+    onNavigateToLevel2Alert: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
@@ -119,6 +120,15 @@ fun SettingsScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
+                
+                // 로그아웃 버튼 추가
+                Button(
+                    onClick = { viewModel.logout(onNavigateToLogin) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.8f))
+                ) {
+                    Text("로그아웃", color = Color.White)
+                }
             }
         }
     }

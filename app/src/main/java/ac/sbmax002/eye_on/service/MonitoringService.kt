@@ -209,10 +209,8 @@ class MonitoringService : Service(), PipelineListener {
                         mode = AppStateRepository.getCurrentAppMode().name,
                         startedAtApp = nowStr
                     )
-                    val response = executeWithAuthRetry("start monitoring session") {
-                        NetworkConfig.monitoringApiService.startMonitoring(request)
-                    }
-                    if (response != null && response.isSuccessful) {
+                    val response = NetworkConfig.monitoringApiService.startMonitoring(request)
+                    if (response.isSuccessful) {
                         serverSessionId = response.body()?.sessionId
                         Log.d(TAG, "Server session started: $serverSessionId")
                     } else {
@@ -259,10 +257,8 @@ class MonitoringService : Service(), PipelineListener {
                 try {
                     val nowStr = currentKstTimestampString()
                     val request = MonitoringEndRequest(endedAtApp = nowStr)
-                    val response = executeWithAuthRetry("end monitoring session") {
-                        NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
-                    }
-                    if (response != null && response.isSuccessful) {
+                    val response = NetworkConfig.monitoringApiService.endMonitoring(currentSessionId, request)
+                    if (response.isSuccessful) {
                         Log.d(TAG, "Server session ended: $currentSessionId")
                     } else {
                         logHttpFailure("Failed to end server session", response)
@@ -432,10 +428,8 @@ class MonitoringService : Service(), PipelineListener {
                         eventType = eventType,
                         occurredAtApp = nowStr
                     )
-                    val response = executeWithAuthRetry("record monitoring event($eventType)") {
-                        NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
-                    }
-                    if (response != null && response.isSuccessful) {
+                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    if (response.isSuccessful) {
                         Log.d(TAG, "Server event recorded: $eventType ($oldLevel -> $newLevel)")
                     } else {
                         logHttpFailure("Failed to record server event($eventType)", response)
@@ -447,10 +441,8 @@ class MonitoringService : Service(), PipelineListener {
                         eventType = "NORMAL",
                         occurredAtApp = nowStr
                     )
-                    val response = executeWithAuthRetry("record monitoring event(NORMAL)") {
-                        NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
-                    }
-                    if (response != null && response.isSuccessful) {
+                    val response = NetworkConfig.monitoringApiService.recordEvent(sessionId, request)
+                    if (response.isSuccessful) {
                         Log.d(TAG, "Server event recorded: NORMAL ($oldLevel -> $newLevel)")
                     } else {
                         logHttpFailure("Failed to record server event(NORMAL)", response)
@@ -466,65 +458,6 @@ class MonitoringService : Service(), PipelineListener {
         return settingsRepository ?: SettingsRepository(applicationContext).also {
             settingsRepository = it
         }
-    }
-
-    private suspend fun tryRefreshAccessToken(): Boolean {
-        val settingsRepo = ensureSettingsRepository()
-        val refreshToken = settingsRepo.refreshToken.first()
-
-        if (refreshToken.isNullOrBlank()) {
-            Log.e(TAG, "Cannot refresh access token: refresh token is empty")
-            return false
-        }
-
-        return try {
-            val refreshResponse = NetworkConfig.authApiService.refresh(TokenRequest(refreshToken))
-            if (!refreshResponse.isSuccessful) {
-                logHttpFailure("Auth refresh failed", refreshResponse)
-                false
-            } else {
-                val authBody = refreshResponse.body()
-                if (authBody == null) {
-                    Log.e(TAG, "Auth refresh failed: empty body")
-                    false
-                } else {
-                    AppStateRepository.accessToken = authBody.accessToken
-                    AppStateRepository.userId = authBody.userId
-                    settingsRepo.saveAuthTokens(
-                        access = authBody.accessToken,
-                        refresh = authBody.refreshToken,
-                        uid = authBody.userId.toString()
-                    )
-                    Log.d(TAG, "Access token refreshed successfully")
-                    true
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error while refreshing access token", e)
-            false
-        }
-    }
-
-    private suspend fun <T> executeWithAuthRetry(
-        requestName: String,
-        block: suspend () -> Response<T>
-    ): Response<T>? {
-        val initialResponse = block()
-        if (initialResponse.code() != 401) {
-            return initialResponse
-        }
-
-        Log.w(TAG, "$requestName got 401, trying access token refresh")
-        val refreshed = tryRefreshAccessToken()
-        if (!refreshed) {
-            return initialResponse
-        }
-
-        val retriedResponse = block()
-        if (retriedResponse.code() == 401) {
-            Log.e(TAG, "$requestName is still unauthorized after refresh")
-        }
-        return retriedResponse
     }
 
     private fun logHttpFailure(prefix: String, response: Response<*>?) {

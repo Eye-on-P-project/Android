@@ -31,7 +31,8 @@ fun EyeOnApp(
     homeViewModel: HomeViewModel,
     // ★ 수정: "= viewModel()" 기본값 제거 (반드시 주입받도록 강제)
     statisticsViewModel: StatisticsViewModel,
-    monitoringService: MonitoringService?
+    monitoringService: MonitoringService?,
+    startDestination: String = Routes.LOGIN
 ) {
     // 네비게이션 컨트롤러 생성 (화면 이동 관리자)
     val navController = rememberNavController()
@@ -39,7 +40,7 @@ fun EyeOnApp(
     // 네비게이션 호스트 (모든 화면을 여기서 관리)
     NavHost(
         navController = navController,
-        startDestination = Routes.LOGIN
+        startDestination = startDestination
     ) {
         // 로그인 화면
         composable(Routes.LOGIN) {
@@ -125,6 +126,11 @@ fun EyeOnApp(
                 },
                 onNavigateToLevel2Alert = {
                     navController.navigate(Routes.LEVEL2_ALERT)
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
                 }
             )
         }

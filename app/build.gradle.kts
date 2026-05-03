@@ -103,5 +103,8 @@ dependencies {
     // Retrofit & OkHttp
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)
+    
+    // Security Crypto
+    implementation(libs.androidx.security.crypto)
 
 }

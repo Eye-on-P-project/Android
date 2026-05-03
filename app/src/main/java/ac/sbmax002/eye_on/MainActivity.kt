@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.lifecycleScope
@@ -87,17 +89,49 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 스플래시 화면 설정 (Android 12+)
+        var startDest: String? = null
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            installSplashScreen()
+            val splashScreen = installSplashScreen()
+            splashScreen.setKeepOnScreenCondition { startDest == null }
         }
         
         super.onCreate(savedInstanceState)
 
-        restoreAuthStateFromStorage()
         // Service 바인딩
         bindMonitoringService()
 
+        val authRepository = ac.sbmax002.eye_on.repository.AuthRepository(applicationContext)
+        lifecycleScope.launch {
+            val accessToken = authRepository.getAccessToken()
+            val refreshToken = authRepository.getRefreshToken()
+            val userId = authRepository.getUserId()?.toLongOrNull()
+
+            AppStateRepository.accessToken = accessToken
+            AppStateRepository.userId = userId
+            Log.d(TAG, "Auth state restored: hasAccessToken=${!accessToken.isNullOrBlank()}, userId=$userId")
+            
+            startDest = if (!accessToken.isNullOrBlank() || !refreshToken.isNullOrBlank()) {
+                ac.sbmax002.eye_on.navigation.Routes.HOME
+            } else {
+                ac.sbmax002.eye_on.navigation.Routes.LOGIN
+            }
+        }
+
         setContent {
+            var currentStartDest by remember { mutableStateOf<String?>(null) }
+            
+            LaunchedEffect(startDest) {
+                while(startDest == null) {
+                    kotlinx.coroutines.delay(50)
+                }
+                currentStartDest = startDest
+            }
+
+            if (currentStartDest == null) {
+                return@setContent
+            }
+
             EyeOnTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -119,7 +153,8 @@ class MainActivity : ComponentActivity() {
                     EyeOnApp(
                         homeViewModel = homeViewModel,
                         statisticsViewModel = statisticsViewModel,
-                        monitoringService = monitoringServiceState
+                        monitoringService = monitoringServiceState,
+                        startDestination = currentStartDest!!
                     )
                 }
             }
@@ -158,10 +193,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreAuthStateFromStorage() {
-        val settingsRepository = SettingsRepository(applicationContext)
+        val authRepository = ac.sbmax002.eye_on.repository.AuthRepository(applicationContext)
         lifecycleScope.launch {
-            val accessToken = settingsRepository.accessToken.first()
-            val userId = settingsRepository.userId.first()?.toLongOrNull()
+            val accessToken = authRepository.getAccessToken()
+            val userId = authRepository.getUserId()?.toLongOrNull()
 
             AppStateRepository.accessToken = accessToken
             AppStateRepository.userId = userId
