@@ -33,6 +33,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLevel1Alert: () -> Unit = {},
     onNavigateToLevel2Alert: () -> Unit = {},
+    onNavigateToChangePassword: () -> Unit = {},
     onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,6 +120,31 @@ fun SettingsScreen(
                     onCheckedChange = { viewModel.toggleVibration() }
                 )
                 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToChangePassword)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "비밀번호 변경",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = (-0.31).sp
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Color(0xFF99A1AF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // 로그아웃 버튼 추가
