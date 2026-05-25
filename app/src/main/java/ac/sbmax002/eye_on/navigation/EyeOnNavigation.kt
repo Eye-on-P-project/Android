@@ -16,7 +16,8 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 import ac.sbmax002.eye_on.ui.settings.SettingsScreen
 import ac.sbmax002.eye_on.ui.settings.Level1AlertScreen
 import ac.sbmax002.eye_on.ui.settings.Level2AlertScreen
-import ac.sbmax002.eye_on.ui.settings.ChangePasswordScreen
+import ac.sbmax002.eye_on.ui.settings.AccountScreen
+import ac.sbmax002.eye_on.ui.settings.EditProfileScreen
 import ac.sbmax002.eye_on.navigation.Routes
 
 /**
@@ -128,13 +129,8 @@ fun EyeOnApp(
                 onNavigateToLevel2Alert = {
                     navController.navigate(Routes.LEVEL2_ALERT)
                 },
-                onNavigateToChangePassword = {
-                    navController.navigate(Routes.CHANGE_PASSWORD)
-                },
-                onNavigateToLogin = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
+                onNavigateToAccount = {
+                    navController.navigate(Routes.ACCOUNT)
                 }
             )
         }
@@ -153,9 +149,24 @@ fun EyeOnApp(
             )
         }
 
-        // 7. 비밀번호 변경 화면
-        composable(Routes.CHANGE_PASSWORD) {
-            ChangePasswordScreen(
+        // 7. 계정 화면
+        composable(Routes.ACCOUNT) {
+            AccountScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEditProfile = {
+                    navController.navigate(Routes.EDIT_PROFILE)
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // 8. 회원 정보 수정 화면
+        composable(Routes.EDIT_PROFILE) {
+            EditProfileScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
