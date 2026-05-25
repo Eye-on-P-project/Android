@@ -16,6 +16,7 @@ import ac.sbmax002.eye_on.ui.statistics.StatisticsViewModel
 import ac.sbmax002.eye_on.ui.settings.SettingsScreen
 import ac.sbmax002.eye_on.ui.settings.Level1AlertScreen
 import ac.sbmax002.eye_on.ui.settings.Level2AlertScreen
+import ac.sbmax002.eye_on.ui.settings.ChangePasswordScreen
 import ac.sbmax002.eye_on.navigation.Routes
 
 /**
@@ -127,6 +128,9 @@ fun EyeOnApp(
                 onNavigateToLevel2Alert = {
                     navController.navigate(Routes.LEVEL2_ALERT)
                 },
+                onNavigateToChangePassword = {
+                    navController.navigate(Routes.CHANGE_PASSWORD)
+                },
                 onNavigateToLogin = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(navController.graph.id) { inclusive = true }
@@ -145,6 +149,13 @@ fun EyeOnApp(
         // 6. 2단계 알림음 설정 화면
         composable(Routes.LEVEL2_ALERT) {
             Level2AlertScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 7. 비밀번호 변경 화면
+        composable(Routes.CHANGE_PASSWORD) {
+            ChangePasswordScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
