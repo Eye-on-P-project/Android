@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -24,10 +23,12 @@ import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChangePasswordScreen(
-    viewModel: ChangePasswordViewModel = hiltViewModel(),
+fun EditProfileScreen(
+    viewModel: AccountViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
+    val name by viewModel.name.collectAsState()
+    val nickname by viewModel.nickname.collectAsState()
     val currentPassword by viewModel.currentPassword.collectAsState()
     val newPassword by viewModel.newPassword.collectAsState()
     val confirmPassword by viewModel.confirmPassword.collectAsState()
@@ -38,10 +39,10 @@ fun ChangePasswordScreen(
     LaunchedEffect(key1 = true) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChangePasswordViewModel.UiEvent.ShowSnackbar -> {
+                is AccountViewModel.UiEvent.ShowSnackbar -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
-                is ChangePasswordViewModel.UiEvent.NavigateBack -> {
+                is AccountViewModel.UiEvent.NavigateBack -> {
                     onNavigateBack()
                 }
             }
@@ -53,7 +54,7 @@ fun ChangePasswordScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "비밀번호 변경",
+                        text = "회원 정보 수정",
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -85,10 +86,53 @@ fun ChangePasswordScreen(
         ) {
             
             Text(
-                text = "새로운 비밀번호를 입력해주세요.",
-                color = Color.LightGray,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
+                text = "프로필 설정",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            // 이름 (변경 가능)
+            OutlinedTextField(
+                value = name,
+                onValueChange = viewModel::updateName,
+                label = { Text("이름", color = Color(0xFF99A1AF)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF007AFF),
+                    unfocusedBorderColor = Color(0xFF424242),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFF007AFF)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // 닉네임 (변경 가능)
+            OutlinedTextField(
+                value = nickname,
+                onValueChange = viewModel::updateNickname,
+                label = { Text("닉네임", color = Color(0xFF99A1AF)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF007AFF),
+                    unfocusedBorderColor = Color(0xFF424242),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFF007AFF)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            HorizontalDivider(color = Color(0xFF2A2A2A), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+
+            Text(
+                text = "비밀번호 변경",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
 
             // 현재 비밀번호
@@ -152,7 +196,7 @@ fun ChangePasswordScreen(
 
             // 변경 버튼
             Button(
-                onClick = { viewModel.changePassword() },
+                onClick = { viewModel.saveProfile() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -171,7 +215,7 @@ fun ChangePasswordScreen(
                     )
                 } else {
                     Text(
-                        text = "변경하기",
+                        text = "정보 수정 완료",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

@@ -14,7 +14,8 @@ object Routes {
     const val STATISTICS = "statistics"
     const val DETAIL = "detail"
     const val SETTINGS = "settings"
-    const val CHANGE_PASSWORD = "change_password"
+    const val ACCOUNT = "account"
+    const val EDIT_PROFILE = "edit_profile"
     const val LEVEL1_ALERT = "level1_alert"
     const val LEVEL2_ALERT = "level2_alert"
     
