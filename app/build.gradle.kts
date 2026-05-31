@@ -103,6 +103,9 @@ dependencies {
     // Retrofit & OkHttp
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)
+
+    // TensorFlow Lite runtime for on-device drowsiness models.
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
     
     // Security Crypto
     implementation(libs.androidx.security.crypto)

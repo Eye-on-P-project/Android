@@ -47,6 +47,7 @@ class FaceLandmarkerHelper(
     // For this example this needs to be a var so it can be reset on changes.
     // If the Face Landmarker will not change, a lazy val would be preferable.
     private var faceLandmarker: FaceLandmarker? = null // 모델 인스턴스 보관
+    private val liveStreamBitmaps = mutableMapOf<Long, Bitmap>()
 
     init {
         setupFaceLandmarker() // 생성 시 모델/옵션 초기화
@@ -55,6 +56,7 @@ class FaceLandmarkerHelper(
     fun clearFaceLandmarker() { //리소스 해제 및 참조 제거
         faceLandmarker?.close()
         faceLandmarker = null
+        liveStreamBitmaps.clear()
     }
 
     // Return running status of FaceLandmarkerHelper
@@ -190,6 +192,7 @@ class FaceLandmarkerHelper(
 
         // 모델이 요구하는 MPImage로 래핑, 바로 추론에 사용 가능
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
+        liveStreamBitmaps[frameTime] = rotatedBitmap
 
         //LIVE_STREAM 모드의 비동기 추론 실행(모델 실행), 결과는 등록한 ResultListener 콜백으로 돌아옴
         detectAsync(mpImage, frameTime)
@@ -338,22 +341,19 @@ class FaceLandmarkerHelper(
         result: FaceLandmarkerResult, // 모델이 방금 산출한 얼굴 랜드마크 결과 묶음
         input: MPImage // 이 결과가 계산될 때 입력으로 쓰인 MPImage
     ) {
-        if( result.faceLandmarks().size > 0 ) { //얼굴이 하나라도 검출 됐는지 확인
-            val finishTimeMs = SystemClock.uptimeMillis() //지금 시각(ms) 추론이 끝나 콜백이 불린 순간
-            val inferenceTime = finishTimeMs - result.timestampMs() //추론 지연시간 계산
+        val finishTimeMs = SystemClock.uptimeMillis() //지금 시각(ms) 추론이 끝나 콜백이 불린 순간
+        val inferenceTime = finishTimeMs - result.timestampMs() //추론 지연시간 계산
+        val bitmap = liveStreamBitmaps.remove(result.timestampMs())
 
-            faceLandmarkerHelperListener?.onResults( //외부(호출자)에게 정상 결과 전달
-                ResultBundle( // 데이터를 하나로 묶음
-                    result, //원본 결과 객체(랜드마크, 블렌드셰입 등)
-                    inferenceTime,
-                    input.height,
-                    input.width
-                )
+        faceLandmarkerHelperListener?.onResults( //외부(호출자)에게 정상 결과 전달
+            ResultBundle( // 데이터를 하나로 묶음
+                result, //원본 결과 객체(랜드마크, 블렌드셰입 등)
+                inferenceTime,
+                input.height,
+                input.width,
+                bitmap
             )
-        }
-        else {
-            faceLandmarkerHelperListener?.onEmpty()
-        }
+        )
     }
 
     // LIVE_STREAM 추론 중 발생한 런타임 예외를 상위로 전달하는 에러 콜백
@@ -370,6 +370,7 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
+        val bitmap: Bitmap? = null
     )
 
     data class VideoResultBundle(
