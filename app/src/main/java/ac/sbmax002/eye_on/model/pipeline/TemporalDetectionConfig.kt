@@ -33,6 +33,13 @@ data class TemporalDetectionConfig(
     // The training script used a streaming smoothing window of 3.
     val resultSmoothingWindow: Int = 3,
 
+    // If the eye model says the user stays eyes-open while already drowsy/sleeping,
+    // recover to NORMAL and clear temporal GRU context after this duration.
+    val openEyeRecoveryMs: Long = 2_000L,
+
+    // Maximum raw closed-eye probability from the eye model to count as eyes-open.
+    val eyeModelOpenPClosedThreshold: Float = 0.50f,
+
     // Rolling window used to compute PERCLOS and blink statistics.
     val rollingWindowSeconds: Int = 10,
 

@@ -17,6 +17,11 @@ class SleepModelRunner(context: Context) {
     private val sleepInterpreter = Interpreter(File(assetFilePath(context, SLEEP_MODEL_ASSET)))
     private val eyeInterpreter = Interpreter(File(assetFilePath(context, EYE_MODEL_ASSET)))
 
+    init {
+        sleepInterpreter.allocateTensors()
+        eyeInterpreter.allocateTensors()
+    }
+
     private val eyeResizeBitmap =
         Bitmap.createBitmap(EYE_INPUT_SIZE, EYE_INPUT_SIZE, Bitmap.Config.ARGB_8888)
     private val eyeResizeCanvas = Canvas(eyeResizeBitmap)
@@ -24,6 +29,7 @@ class SleepModelRunner(context: Context) {
     private val eyePixels = IntArray(EYE_INPUT_SIZE * EYE_INPUT_SIZE)
     private var eyeInputBuffer = newFloatBuffer(3 * EYE_INPUT_SIZE * EYE_INPUT_SIZE)
 
+    @Synchronized
     fun runSleepGru(features: FloatArray, seqLen: Int): FloatArray {
         require(seqLen > 0) { "seqLen must be > 0" }
         require(features.size == seqLen * FEATURE_COUNT) {
@@ -33,6 +39,16 @@ class SleepModelRunner(context: Context) {
         val input = buildSleepInputBuffer(features, seqLen, sleepInterpreter.getInputTensor(0).shape())
         val output = runFloatModel(sleepInterpreter, input)
         return normalizeProbabilities(output)
+    }
+
+    @Synchronized
+    fun describeSleepModel(): String {
+        val inputTensor = sleepInterpreter.getInputTensor(0)
+        val outputTensor = sleepInterpreter.getOutputTensor(0)
+        return "inputShape=${inputTensor.shape().contentToString()}, " +
+            "inputType=${inputTensor.dataType()}, " +
+            "outputShape=${outputTensor.shape().contentToString()}, " +
+            "outputType=${outputTensor.dataType()}"
     }
 
     fun runEyeModelBatch(sourceBitmap: Bitmap, eyeRects: List<Rect>): List<FloatArray> {
@@ -59,29 +75,39 @@ class SleepModelRunner(context: Context) {
                 "sleep GRU input shape must contain feature count $FEATURE_COUNT. " +
                     "got=${inputShape.joinToString(prefix = "[", postfix = "]")}"
             )
-        val seqAxis = inputShape.indexOf(seqLen).takeIf { it >= 0 }
+        val seqAxis = listOf(1, 2).firstOrNull { it != featureAxis && inputShape[it] == seqLen }
             ?: listOf(1, 2).firstOrNull { it != featureAxis && inputShape[it] == -1 }
+            ?: listOf(1, 2).firstOrNull { it != featureAxis && inputShape[it] > 0 }
             ?: listOf(1, 2).firstOrNull { it != featureAxis }
             ?: error(
                 "sleep GRU input shape must contain seqLen $seqLen. " +
                     "got=${inputShape.joinToString(prefix = "[", postfix = "]")}"
             )
+        val modelSeqLen = inputShape[seqAxis].takeIf { it > 0 } ?: seqLen
+        require(seqLen >= modelSeqLen) {
+            "sleep GRU needs at least $modelSeqLen feature rows. got=$seqLen"
+        }
 
-        if (inputShape[0] != 1 || inputShape[seqAxis] != seqLen || inputShape[featureAxis] != FEATURE_COUNT) {
+        if (inputShape[0] != 1 || inputShape[seqAxis] == -1 || inputShape[featureAxis] != FEATURE_COUNT) {
             val resizedShape = inputShape.copyOf()
             resizedShape[0] = 1
-            resizedShape[seqAxis] = seqLen
+            resizedShape[seqAxis] = modelSeqLen
             resizedShape[featureAxis] = FEATURE_COUNT
             sleepInterpreter.resizeInput(0, resizedShape)
             sleepInterpreter.allocateTensors()
         }
 
-        val buffer = newFloatBuffer(seqLen * FEATURE_COUNT)
+        val firstFrameIndex = seqLen - modelSeqLen
+        val buffer = newFloatBuffer(modelSeqLen * FEATURE_COUNT)
         if (seqAxis == 1 && featureAxis == 2) {
-            features.forEach { buffer.putFloat(it) }
+            for (frameIndex in firstFrameIndex until seqLen) {
+                for (featureIndex in 0 until FEATURE_COUNT) {
+                    buffer.putFloat(features[frameIndex * FEATURE_COUNT + featureIndex])
+                }
+            }
         } else if (seqAxis == 2 && featureAxis == 1) {
             for (featureIndex in 0 until FEATURE_COUNT) {
-                for (frameIndex in 0 until seqLen) {
+                for (frameIndex in firstFrameIndex until seqLen) {
                     buffer.putFloat(features[frameIndex * FEATURE_COUNT + featureIndex])
                 }
             }
@@ -196,8 +222,8 @@ class SleepModelRunner(context: Context) {
     companion object {
         const val FEATURE_COUNT = 13
         const val EYE_INPUT_SIZE = 224
-        private const val SLEEP_MODEL_ASSET = "sleep_gru_float32.tflite"
-        private const val EYE_MODEL_ASSET = "eye_mobilenetv4_float32.tflite"
+        private const val SLEEP_MODEL_ASSET = "gru_fp32.tflite"
+        private const val EYE_MODEL_ASSET = "eye_fp32.tflite"
         private const val BYTES_PER_FLOAT = 4
         private val EYE_MODEL_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
         private val EYE_MODEL_STD = floatArrayOf(0.229f, 0.224f, 0.225f)

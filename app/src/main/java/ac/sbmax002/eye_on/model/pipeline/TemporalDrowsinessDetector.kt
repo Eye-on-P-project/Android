@@ -84,9 +84,11 @@ class TemporalDrowsinessDetector(
     private var lastAcceptedFrameMs: Long? = null
     private var lastGruInferenceMs: Long = 0L
     private var closedStartedAtMs: Long? = null
+    private var openStartedAtMs: Long? = null
     private var blinkStartedAtMs: Long? = null
     private var blinkMinEarZ = 0f
     private var blinkStartEarZ = 0f
+    private var blinkPeakPClosed = 0f
     private var drowsyStreak = 0
     private var sleepyStreak = 0
     private var state = DrowsinessState.NORMAL
@@ -156,9 +158,32 @@ class TemporalDrowsinessDetector(
         featureRows.addLast(row.values)
         while (featureRows.size > config.sequenceLength) featureRows.removeFirst()
 
-        val isWarmingUp = calibration == null || featureRows.size < config.sequenceLength
         var probabilities = averageProbabilities()
         var gruInferenceMs = 0L
+
+        if (recoverToNormalIfEyesOpen(timestampMs, pClosed)) {
+            logDebugIfNeeded(
+                timestampMs = timestampMs,
+                debug = row.debug.copy(sequenceSize = featureRows.size),
+                probabilities = probabilities,
+                faceLandmarkerMs = faceLandmarkerMs,
+                eyeInferenceMs = eyeInferenceMs,
+                featureBuildMs = featureBuildMs,
+                gruInferenceMs = gruInferenceMs,
+                totalFrameMs = SystemClock.elapsedRealtime() - totalStartedAt
+            )
+
+            val closed = pClosed >= P_CLOSED_START_THRESHOLD
+            return DetectionOutput(
+                state = state,
+                leftEar = leftEar,
+                rightEar = rightEar,
+                leftClosed = closed,
+                rightClosed = closed
+            )
+        }
+
+        val isWarmingUp = calibration == null || featureRows.size < config.sequenceLength
 
         if (!isWarmingUp && timestampMs - lastGruInferenceMs >= config.gruIntervalMs) {
             val flattened = FloatArray(featureRows.size * SleepModelRunner.FEATURE_COUNT)
@@ -168,20 +193,34 @@ class TemporalDrowsinessDetector(
                 offset += SleepModelRunner.FEATURE_COUNT
             }
             val gruStartedAt = SystemClock.elapsedRealtime()
-            val prediction = modelRunner.runSleepGru(flattened, featureRows.size)
+            val prediction = try {
+                modelRunner.runSleepGru(flattened, featureRows.size)
+            } catch (e: Exception) {
+                Log.e(
+                    TAG,
+                    "sleep GRU inference failed. seqLen=${featureRows.size}, " +
+                        "featureCount=${SleepModelRunner.FEATURE_COUNT}, " +
+                        "features=${flattened.size}, ${modelRunner.describeSleepModel()}",
+                    e
+                )
+                lastGruInferenceMs = timestampMs
+                null
+            } ?: FloatArray(0)
             gruInferenceMs = SystemClock.elapsedRealtime() - gruStartedAt
-            val nextProbabilities = DrowsinessProbabilities(
-                normal = prediction.getOrElse(0) { 0f },
-                drowsy = prediction.getOrElse(1) { 0f },
-                sleepy = prediction.getOrElse(2) { 0f }
-            )
-            probabilityHistory.addLast(nextProbabilities)
-            while (probabilityHistory.size > config.resultSmoothingWindow) {
-                probabilityHistory.removeFirst()
+            if (prediction.isNotEmpty()) {
+                val nextProbabilities = DrowsinessProbabilities(
+                    normal = prediction.getOrElse(0) { 0f },
+                    drowsy = prediction.getOrElse(1) { 0f },
+                    sleepy = prediction.getOrElse(2) { 0f }
+                )
+                probabilityHistory.addLast(nextProbabilities)
+                while (probabilityHistory.size > config.resultSmoothingWindow) {
+                    probabilityHistory.removeFirst()
+                }
+                probabilities = averageProbabilities()
+                state = classify(probabilities)
+                lastGruInferenceMs = timestampMs
             }
-            probabilities = averageProbabilities()
-            state = classify(probabilities)
-            lastGruInferenceMs = timestampMs
         }
 
         logDebugIfNeeded(
@@ -215,7 +254,9 @@ class TemporalDrowsinessDetector(
         lastAcceptedFrameMs = null
         lastGruInferenceMs = 0L
         closedStartedAtMs = null
+        openStartedAtMs = null
         blinkStartedAtMs = null
+        blinkPeakPClosed = 0f
         lastDebugLogMs = 0L
         lastFpsSampleMs = 0L
         inputFramesInSample = 0
@@ -235,7 +276,9 @@ class TemporalDrowsinessDetector(
         blinkEvents.clear()
         probabilityHistory.clear()
         closedStartedAtMs = null
+        openStartedAtMs = null
         blinkStartedAtMs = null
+        blinkPeakPClosed = 0f
         lastGruInferenceMs = 0L
         drowsyStreak = 0
         sleepyStreak = 0
@@ -341,22 +384,60 @@ class TemporalDrowsinessDetector(
         return closedStartedAtMs?.let { (timestampMs - it).coerceAtLeast(0L) / 1_000f } ?: 0f
     }
 
+    private fun recoverToNormalIfEyesOpen(timestampMs: Long, pClosed: Float): Boolean {
+        if (state == DrowsinessState.NORMAL) {
+            openStartedAtMs = null
+            return false
+        }
+
+        if (pClosed > config.eyeModelOpenPClosedThreshold) {
+            openStartedAtMs = null
+            return false
+        }
+
+        val startedAt = openStartedAtMs ?: timestampMs.also { openStartedAtMs = it }
+        if (timestampMs - startedAt < config.openEyeRecoveryMs) return false
+
+        resetTemporalContextAfterRecovery(timestampMs)
+        return true
+    }
+
+    private fun resetTemporalContextAfterRecovery(timestampMs: Long) {
+        rawFrames.clear()
+        featureRows.clear()
+        blinkEvents.clear()
+        probabilityHistory.clear()
+        closedStartedAtMs = null
+        openStartedAtMs = null
+        blinkStartedAtMs = null
+        blinkPeakPClosed = 0f
+        lastGruInferenceMs = timestampMs
+        drowsyStreak = 0
+        sleepyStreak = 0
+        state = DrowsinessState.NORMAL
+    }
+
     private fun updateBlinkEvents(timestampMs: Long, pClosedSmooth: Float, earZ: Float) {
-        if (blinkStartedAtMs == null && pClosedSmooth >= P_CLOSED_START_THRESHOLD) {
+        if (blinkStartedAtMs == null && pClosedSmooth >= BLINK_START_THRESHOLD) {
             blinkStartedAtMs = timestampMs
             blinkStartEarZ = earZ
             blinkMinEarZ = earZ
+            blinkPeakPClosed = pClosedSmooth
             return
         }
 
         val startedAt = blinkStartedAtMs ?: return
         blinkMinEarZ = min(blinkMinEarZ, earZ)
+        blinkPeakPClosed = max(blinkPeakPClosed, pClosedSmooth)
         if (pClosedSmooth > P_CLOSED_END_THRESHOLD) return
 
         val durationSec = (timestampMs - startedAt) / 1_000f
         if (durationSec in MIN_BLINK_DURATION_SEC..MAX_BLINK_DURATION_SEC) {
             val amplitude = ((blinkStartEarZ + earZ) / 2f) - blinkMinEarZ
-            if (amplitude >= MIN_BLINK_AMPLITUDE_Z) {
+            val strongEyeModelBlink = blinkPeakPClosed >= STRONG_EYE_MODEL_BLINK_THRESHOLD
+            val weakEyeModelBlink = blinkPeakPClosed >= WEAK_EYE_MODEL_BLINK_THRESHOLD &&
+                amplitude >= MIN_WEAK_BLINK_AMPLITUDE_Z
+            if (strongEyeModelBlink || weakEyeModelBlink) {
                 val openingVelocity = (earZ - blinkMinEarZ) / max(durationSec, 1e-6f)
                 blinkEvents.addLast(
                     BlinkEvent(
@@ -369,6 +450,7 @@ class TemporalDrowsinessDetector(
             }
         }
         blinkStartedAtMs = null
+        blinkPeakPClosed = 0f
     }
 
     private fun logDebugIfNeeded(
@@ -618,7 +700,10 @@ class TemporalDrowsinessDetector(
         private const val P_CLOSED_END_THRESHOLD = 0.30f
         private const val MIN_BLINK_DURATION_SEC = 0.05f
         private const val MAX_BLINK_DURATION_SEC = 2.0f
-        private const val MIN_BLINK_AMPLITUDE_Z = 0.10f
+        private const val BLINK_START_THRESHOLD = 0.55f
+        private const val STRONG_EYE_MODEL_BLINK_THRESHOLD = 0.75f
+        private const val WEAK_EYE_MODEL_BLINK_THRESHOLD = 0.55f
+        private const val MIN_WEAK_BLINK_AMPLITUDE_Z = 0.05f
         private const val EYE_CROP_PADDING = 0.65f
     }
 }
