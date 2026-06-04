@@ -27,7 +27,7 @@ class SleepModelRunner(context: Context) {
     private val eyeResizeCanvas = Canvas(eyeResizeBitmap)
     private val eyeResizePaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val eyePixels = IntArray(EYE_INPUT_SIZE * EYE_INPUT_SIZE)
-    private var eyeInputBuffer = newFloatBuffer(3 * EYE_INPUT_SIZE * EYE_INPUT_SIZE)
+    private var eyeInputBuffer = newFloatBuffer(EYE_INPUT_SIZE * EYE_INPUT_SIZE)
 
     @Synchronized
     fun runSleepGru(features: FloatArray, seqLen: Int): FloatArray {
@@ -134,23 +134,27 @@ class SleepModelRunner(context: Context) {
             "eye model input rank must be 4. got=${inputShape.joinToString(prefix = "[", postfix = "]")}"
         }
 
-        val isNhwc = inputShape[1] == EYE_INPUT_SIZE && inputShape[2] == EYE_INPUT_SIZE && inputShape[3] == 3
-        val isNchw = inputShape[1] == 3 && inputShape[2] == EYE_INPUT_SIZE && inputShape[3] == EYE_INPUT_SIZE
+        val isNhwc = inputShape[1] == EYE_INPUT_SIZE &&
+            inputShape[2] == EYE_INPUT_SIZE &&
+            inputShape[3] == EYE_INPUT_CHANNELS
+        val isNchw = inputShape[1] == EYE_INPUT_CHANNELS &&
+            inputShape[2] == EYE_INPUT_SIZE &&
+            inputShape[3] == EYE_INPUT_SIZE
         require(isNhwc || isNchw) {
             "unsupported eye model input shape ${inputShape.joinToString(prefix = "[", postfix = "]")}"
         }
         if (inputShape[0] != 1) {
             val resizedShape = if (isNhwc) {
-                intArrayOf(1, EYE_INPUT_SIZE, EYE_INPUT_SIZE, 3)
+                intArrayOf(1, EYE_INPUT_SIZE, EYE_INPUT_SIZE, EYE_INPUT_CHANNELS)
             } else {
-                intArrayOf(1, 3, EYE_INPUT_SIZE, EYE_INPUT_SIZE)
+                intArrayOf(1, EYE_INPUT_CHANNELS, EYE_INPUT_SIZE, EYE_INPUT_SIZE)
             }
             eyeInterpreter.resizeInput(0, resizedShape)
             eyeInterpreter.allocateTensors()
         }
 
         val imageSize = EYE_INPUT_SIZE * EYE_INPUT_SIZE
-        val requiredFloats = 3 * imageSize
+        val requiredFloats = EYE_INPUT_CHANNELS * imageSize
         if (eyeInputBuffer.capacity() != requiredFloats * BYTES_PER_FLOAT) {
             eyeInputBuffer = newFloatBuffer(requiredFloats)
         }
@@ -164,41 +168,23 @@ class SleepModelRunner(context: Context) {
         )
         eyeResizeBitmap.getPixels(eyePixels, 0, EYE_INPUT_SIZE, 0, 0, EYE_INPUT_SIZE, EYE_INPUT_SIZE)
 
-        if (isNhwc) {
-            var pixelIndex = 0
-            while (pixelIndex < imageSize) {
-                val color = eyePixels[pixelIndex]
-                eyeInputBuffer.putFloat(normalizeRed(color))
-                eyeInputBuffer.putFloat(normalizeGreen(color))
-                eyeInputBuffer.putFloat(normalizeBlue(color))
-                pixelIndex++
-            }
-        } else {
-            putNchwChannel(imageSize, ::normalizeRed)
-            putNchwChannel(imageSize, ::normalizeGreen)
-            putNchwChannel(imageSize, ::normalizeBlue)
+        var pixelIndex = 0
+        while (pixelIndex < imageSize) {
+            eyeInputBuffer.putFloat(normalizeGray(eyePixels[pixelIndex]))
+            pixelIndex++
         }
 
         eyeInputBuffer.rewind()
         return eyeInputBuffer
     }
 
-    private fun putNchwChannel(imageSize: Int, normalize: (Int) -> Float) {
-        var pixelIndex = 0
-        while (pixelIndex < imageSize) {
-            eyeInputBuffer.putFloat(normalize(eyePixels[pixelIndex]))
-            pixelIndex++
-        }
+    private fun normalizeGray(color: Int): Float {
+        val red = (color shr 16) and 0xFF
+        val green = (color shr 8) and 0xFF
+        val blue = color and 0xFF
+        val gray = (0.299f * red + 0.587f * green + 0.114f * blue) / 255f
+        return (gray - EYE_MODEL_MEAN) / EYE_MODEL_STD
     }
-
-    private fun normalizeRed(color: Int): Float =
-        ((((color shr 16) and 0xFF) / 255f) - EYE_MODEL_MEAN[0]) / EYE_MODEL_STD[0]
-
-    private fun normalizeGreen(color: Int): Float =
-        ((((color shr 8) and 0xFF) / 255f) - EYE_MODEL_MEAN[1]) / EYE_MODEL_STD[1]
-
-    private fun normalizeBlue(color: Int): Float =
-        (((color and 0xFF) / 255f) - EYE_MODEL_MEAN[2]) / EYE_MODEL_STD[2]
 
     private fun normalizeProbabilities(values: FloatArray): FloatArray {
         if (values.isEmpty()) return values
@@ -223,10 +209,11 @@ class SleepModelRunner(context: Context) {
         const val FEATURE_COUNT = 13
         const val EYE_INPUT_SIZE = 224
         private const val SLEEP_MODEL_ASSET = "gru_fp32.tflite"
-        private const val EYE_MODEL_ASSET = "eye_fp32.tflite"
+        private const val EYE_MODEL_ASSET = "eye.tflite"
+        private const val EYE_INPUT_CHANNELS = 1
         private const val BYTES_PER_FLOAT = 4
-        private val EYE_MODEL_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
-        private val EYE_MODEL_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+        private const val EYE_MODEL_MEAN = 0f
+        private const val EYE_MODEL_STD = 1f
 
         private fun newFloatBuffer(floatCount: Int): ByteBuffer =
             ByteBuffer.allocateDirect(floatCount * BYTES_PER_FLOAT).order(ByteOrder.nativeOrder())
