@@ -3,8 +3,6 @@ package ac.sbmax002.eye_on.model.vision
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
-import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -47,6 +45,7 @@ class FaceLandmarkerHelper(
     // For this example this needs to be a var so it can be reset on changes.
     // If the Face Landmarker will not change, a lazy val would be preferable.
     private var faceLandmarker: FaceLandmarker? = null // 모델 인스턴스 보관
+    private val liveStreamBitmaps = mutableMapOf<Long, Bitmap>()
 
     init {
         setupFaceLandmarker() // 생성 시 모델/옵션 초기화
@@ -55,11 +54,7 @@ class FaceLandmarkerHelper(
     fun clearFaceLandmarker() { //리소스 해제 및 참조 제거
         faceLandmarker?.close()
         faceLandmarker = null
-    }
-
-    // Return running status of FaceLandmarkerHelper
-    fun isClose(): Boolean {
-        return faceLandmarker == null
+        liveStreamBitmaps.clear()
     }
 
     // 현재 설정을 사용해서 해당 스레드에서 얼굴 랜드마커를 초기화
@@ -80,7 +75,7 @@ class FaceLandmarkerHelper(
             }
         }
 
-        baseOptionBuilder.setModelAssetPath("face_landmarker.task") //사용할 모델의 에셋 경로 지정
+        baseOptionBuilder.setModelAssetPath(MP_FACE_LANDMARKER_TASK) //사용할 모델의 에셋 경로 지정
 
         // 실행모드 검증 ( 비동기 모드에서 결과를 받을 콜백이 없으면 예외 처리)
         when (runningMode) {
@@ -190,6 +185,7 @@ class FaceLandmarkerHelper(
 
         // 모델이 요구하는 MPImage로 래핑, 바로 추론에 사용 가능
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
+        liveStreamBitmaps[frameTime] = rotatedBitmap
 
         //LIVE_STREAM 모드의 비동기 추론 실행(모델 실행), 결과는 등록한 ResultListener 콜백으로 돌아옴
         detectAsync(mpImage, frameTime)
@@ -204,156 +200,24 @@ class FaceLandmarkerHelper(
         // be returned in returnLivestreamResult function
     }
 
-    // Accepts the URI for a video file loaded from the user's gallery and attempts to run
-    // face landmarker inference on the video. This process will evaluate every
-    // frame in the video and attach the results to a bundle that will be
-    // returned.
-    fun detectVideoFile(
-        videoUri: Uri,
-        inferenceIntervalMs: Long
-    ): VideoResultBundle? {
-        if (runningMode != RunningMode.VIDEO) {
-            throw IllegalArgumentException(
-                "Attempting to call detectVideoFile" +
-                        " while not using RunningMode.VIDEO"
-            )
-        }
-
-        // Inference time is the difference between the system time at the start and finish of the
-        // process
-        val startTime = SystemClock.uptimeMillis()
-
-        var didErrorOccurred = false
-
-        // Load frames from the video and run the face landmarker.
-        val retriever = MediaMetadataRetriever()
-        retriever.setDataSource(context, videoUri)
-        val videoLengthMs =
-            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                ?.toLong()
-
-        // Note: We need to read width/height from frame instead of getting the width/height
-        // of the video directly because MediaRetriever returns frames that are smaller than the
-        // actual dimension of the video file.
-        val firstFrame = retriever.getFrameAtTime(0)
-        val width = firstFrame?.width
-        val height = firstFrame?.height
-
-        // If the video is invalid, returns a null detection result
-        if ((videoLengthMs == null) || (width == null) || (height == null)) return null
-
-        // Next, we'll get one frame every frameInterval ms, then run detection on these frames.
-        val resultList = mutableListOf<FaceLandmarkerResult>()
-        val numberOfFrameToRead = videoLengthMs.div(inferenceIntervalMs)
-
-        for (i in 0..numberOfFrameToRead) {
-            val timestampMs = i * inferenceIntervalMs // ms
-
-            retriever
-                .getFrameAtTime(
-                    timestampMs * 1000, // convert from ms to micro-s
-                    MediaMetadataRetriever.OPTION_CLOSEST
-                )
-                ?.let { frame ->
-                    // Convert the video frame to ARGB_8888 which is required by the MediaPipe
-                    val argb8888Frame =
-                        if (frame.config == Bitmap.Config.ARGB_8888) frame
-                        else frame.copy(Bitmap.Config.ARGB_8888, false)
-
-                    // Convert the input Bitmap object to an MPImage object to run inference
-                    val mpImage = BitmapImageBuilder(argb8888Frame).build()
-
-                    // Run face landmarker using MediaPipe Face Landmarker API
-                    faceLandmarker?.detectForVideo(mpImage, timestampMs)
-                        ?.let { detectionResult ->
-                            resultList.add(detectionResult)
-                        } ?: {
-                        didErrorOccurred = true
-                        faceLandmarkerHelperListener?.onError(
-                            "ResultBundle could not be returned" +
-                                    " in detectVideoFile"
-                        )
-                    }
-                }
-                ?: run {
-                    didErrorOccurred = true
-                    faceLandmarkerHelperListener?.onError(
-                        "Frame at specified time could not be" +
-                                " retrieved when detecting in video."
-                    )
-                }
-        }
-
-        retriever.release()
-
-        val inferenceTimePerFrameMs =
-            (SystemClock.uptimeMillis() - startTime).div(numberOfFrameToRead)
-
-        return if (didErrorOccurred) {
-            null
-        } else {
-            VideoResultBundle(resultList, inferenceTimePerFrameMs, height, width)
-        }
-    }
-
-    // Accepted a Bitmap and runs face landmarker inference on it to return
-    // results back to the caller
-    fun detectImage(image: Bitmap): ResultBundle? {
-        if (runningMode != RunningMode.IMAGE) {
-            throw IllegalArgumentException(
-                "Attempting to call detectImage" +
-                        " while not using RunningMode.IMAGE"
-            )
-        }
-
-
-        // Inference time is the difference between the system time at the
-        // start and finish of the process
-        val startTime = SystemClock.uptimeMillis()
-
-        // Convert the input Bitmap object to an MPImage object to run inference
-        val mpImage = BitmapImageBuilder(image).build()
-
-        // Run face landmarker using MediaPipe Face Landmarker API
-        faceLandmarker?.detect(mpImage)?.also { landmarkResult ->
-            val inferenceTimeMs = SystemClock.uptimeMillis() - startTime
-            return ResultBundle(
-                landmarkResult,
-                inferenceTimeMs,
-                image.height,
-                image.width
-            )
-        }
-
-        // If faceLandmarker?.detect() returns null, this is likely an error. Returning null
-        // to indicate this.
-        faceLandmarkerHelperListener?.onError(
-            "Face Landmarker failed to detect."
-        )
-        return null
-    }
-
     // LIVE_STREAM 결과 콜백으로 호출되는 내부 함수.
     private fun returnLivestreamResult(
         result: FaceLandmarkerResult, // 모델이 방금 산출한 얼굴 랜드마크 결과 묶음
         input: MPImage // 이 결과가 계산될 때 입력으로 쓰인 MPImage
     ) {
-        if( result.faceLandmarks().size > 0 ) { //얼굴이 하나라도 검출 됐는지 확인
-            val finishTimeMs = SystemClock.uptimeMillis() //지금 시각(ms) 추론이 끝나 콜백이 불린 순간
-            val inferenceTime = finishTimeMs - result.timestampMs() //추론 지연시간 계산
+        val finishTimeMs = SystemClock.uptimeMillis() //지금 시각(ms) 추론이 끝나 콜백이 불린 순간
+        val inferenceTime = finishTimeMs - result.timestampMs() //추론 지연시간 계산
+        val bitmap = liveStreamBitmaps.remove(result.timestampMs())
 
-            faceLandmarkerHelperListener?.onResults( //외부(호출자)에게 정상 결과 전달
-                ResultBundle( // 데이터를 하나로 묶음
-                    result, //원본 결과 객체(랜드마크, 블렌드셰입 등)
-                    inferenceTime,
-                    input.height,
-                    input.width
-                )
+        faceLandmarkerHelperListener?.onResults( //외부(호출자)에게 정상 결과 전달
+            ResultBundle( // 데이터를 하나로 묶음
+                result, //원본 결과 객체(랜드마크, 블렌드셰입 등)
+                inferenceTime,
+                input.height,
+                input.width,
+                bitmap
             )
-        }
-        else {
-            faceLandmarkerHelperListener?.onEmpty()
-        }
+        )
     }
 
     // LIVE_STREAM 추론 중 발생한 런타임 예외를 상위로 전달하는 에러 콜백
@@ -370,13 +234,7 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
-    )
-
-    data class VideoResultBundle(
-        val results: List<FaceLandmarkerResult>,
-        val inferenceTime: Long,
-        val inputImageHeight: Int,
-        val inputImageWidth: Int,
+        val bitmap: Bitmap? = null
     )
 
     interface LandmarkerListener {
