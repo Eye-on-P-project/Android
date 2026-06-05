@@ -45,3 +45,10 @@ data class TokenRequest(
 data class SimpleResponse(
     val success: Boolean
 )
+
+/**
+ * 계정 탈퇴 요청 (비밀번호 재확인)
+ */
+data class DeleteAccountRequest(
+    val password: String
+)

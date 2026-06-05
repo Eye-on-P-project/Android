@@ -2,6 +2,7 @@ package ac.sbmax002.eye_on.network
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.HTTP
 import retrofit2.http.POST
 
 /**
@@ -21,4 +22,8 @@ interface AuthApiService {
 
     @POST("/api/auth/logout")
     suspend fun logout(@Body request: TokenRequest): Response<SimpleResponse>
+
+    /** 계정 탈퇴 (비밀번호 재확인 필요) */
+    @HTTP(method = "DELETE", path = "/api/auth/account", hasBody = true)
+    suspend fun deleteAccount(@Body request: DeleteAccountRequest): Response<SimpleResponse>
 }

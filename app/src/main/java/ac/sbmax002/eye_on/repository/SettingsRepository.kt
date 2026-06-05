@@ -150,4 +150,11 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.DARK_MODE_ENABLED] = if (enabled) 1 else 0
         }
     }
+
+    /** 모든 설정값 초기화 (계정 탈퇴 시 사용) */
+    suspend fun clearAll() {
+        dataStore.edit { preferences ->
+            preferences.clear()
+        }
+    }
 }
