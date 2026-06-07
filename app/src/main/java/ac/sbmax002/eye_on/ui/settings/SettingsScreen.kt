@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
+import ac.sbmax002.eye_on.repository.SubscriptionRepository
+import ac.sbmax002.eye_on.model.subscription.SubscriptionTier
 
 /**
  * 설정 화면
@@ -33,9 +35,13 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLevel1Alert: () -> Unit = {},
     onNavigateToLevel2Alert: () -> Unit = {},
-    onNavigateToAccount: () -> Unit = {}
+    onNavigateToAccount: () -> Unit = {},
+    onNavigateToSubscription: () -> Unit = {},
+    subscriptionRepository: SubscriptionRepository? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val subscriptionStatus = subscriptionRepository?.subscriptionStatus?.collectAsStateWithLifecycle()
+    val currentTier = subscriptionStatus?.value?.currentTier ?: SubscriptionTier.FREE
     
     Scaffold(
         topBar = {
@@ -76,6 +82,58 @@ fun SettingsScreen(
                         tint = Color(0xFF99A1AF),
                         modifier = Modifier.size(20.dp)
                     )
+                }
+            }
+
+            // 구독 관리 섹션
+            SettingsSection(
+                title = "구독"
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToSubscription)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "구독 관리",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = (-0.31).sp
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 현재 티어 뱃지
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (currentTier == SubscriptionTier.PLUS)
+                                Color(0xFF007AFF).copy(alpha = 0.2f)
+                            else
+                                Color(0xFF99A1AF).copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = currentTier.displayName,
+                                color = if (currentTier == SubscriptionTier.PLUS)
+                                    Color(0xFF007AFF)
+                                else
+                                    Color(0xFF99A1AF),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = Color(0xFF99A1AF),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
