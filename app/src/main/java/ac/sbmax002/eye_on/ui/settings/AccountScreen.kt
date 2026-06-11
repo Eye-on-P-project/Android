@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,6 +32,23 @@ fun AccountScreen(
     val nickname by viewModel.nickname.collectAsState()
     val birthYear by viewModel.birthYear.collectAsState()
     val gender by viewModel.gender.collectAsState()
+    val isDeletingAccount by viewModel.isDeletingAccount.collectAsState()
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
+
+    // Snackbar 이벤트 수신
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.eventFlow.collect { event ->
+            when (event) {
+                is AccountViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is AccountViewModel.UiEvent.NavigateBack -> { /* handled elsewhere */ }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -56,6 +75,7 @@ fun AccountScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFF1A1A1A)
     ) { paddingValues ->
         Column(
@@ -116,7 +136,104 @@ fun AccountScreen(
             ) {
                 Text("로그아웃", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
+
+            // 회원 탈퇴 버튼
+            TextButton(
+                onClick = {
+                    deletePassword = ""
+                    showDeleteDialog = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "회원 탈퇴",
+                    color = Color(0xFF99A1AF),
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline
+                )
+            }
         }
+    }
+
+    // 탈퇴 확인 다이얼로그 (비밀번호 재입력)
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeletingAccount) {
+                    showDeleteDialog = false
+                }
+            },
+            title = {
+                Text(
+                    "회원 탈퇴",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        "정말로 탈퇴하시겠습니까?\n\n" +
+                                "탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.",
+                        color = Color(0xFFCCCCCC),
+                        fontSize = 14.sp
+                    )
+
+                    // 비밀번호 입력 필드
+                    OutlinedTextField(
+                        value = deletePassword,
+                        onValueChange = { deletePassword = it },
+                        label = { Text("비밀번호 확인", color = Color(0xFF99A1AF)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        enabled = !isDeletingAccount,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color.Red,
+                            unfocusedBorderColor = Color(0xFF555555),
+                            cursorColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccount(deletePassword) {
+                            showDeleteDialog = false
+                            onNavigateToLogin()
+                        }
+                    },
+                    enabled = !isDeletingAccount && deletePassword.isNotBlank()
+                ) {
+                    if (isDeletingAccount) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.Red,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("탈퇴하기", color = Color.Red, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !isDeletingAccount
+                ) {
+                    Text("취소", color = Color(0xFF99A1AF))
+                }
+            },
+            containerColor = Color(0xFF2A2A2A),
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 
