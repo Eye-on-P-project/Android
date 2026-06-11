@@ -17,6 +17,12 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import ac.sbmax002.eye_on.repository.SubscriptionRepository
+import ac.sbmax002.eye_on.model.subscription.SubscriptionTier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Star
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,7 +30,9 @@ fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToSubscription: () -> Unit = {},
+    subscriptionRepository: SubscriptionRepository? = null
 ) {
     val email by viewModel.email.collectAsState()
     val organization by viewModel.organization.collectAsState()
@@ -33,6 +41,8 @@ fun AccountScreen(
     val birthYear by viewModel.birthYear.collectAsState()
     val gender by viewModel.gender.collectAsState()
     val isDeletingAccount by viewModel.isDeletingAccount.collectAsState()
+    val subscriptionStatus = subscriptionRepository?.subscriptionStatus?.collectAsStateWithLifecycle()
+    val currentTier = subscriptionStatus?.value?.currentTier ?: SubscriptionTier.FREE
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deletePassword by remember { mutableStateOf("") }
@@ -104,6 +114,56 @@ fun AccountScreen(
                     AccountInfoItem(label = "닉네임", value = nickname)
                     AccountInfoItem(label = "출생 연도", value = birthYear)
                     AccountInfoItem(label = "성별", value = gender, showDivider = false)
+                }
+            }
+
+            // 구독 상태 요약
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToSubscription),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF2A2A2A)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (currentTier == SubscriptionTier.PLUS) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD60A),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "구독 상태",
+                                color = Color(0xFF99A1AF),
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${currentTier.displayName} 플랜",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Color(0xFF99A1AF),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 

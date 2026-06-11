@@ -18,6 +18,8 @@ import ac.sbmax002.eye_on.ui.settings.Level1AlertScreen
 import ac.sbmax002.eye_on.ui.settings.Level2AlertScreen
 import ac.sbmax002.eye_on.ui.settings.AccountScreen
 import ac.sbmax002.eye_on.ui.settings.EditProfileScreen
+import ac.sbmax002.eye_on.ui.subscription.SubscriptionStatusScreen
+import ac.sbmax002.eye_on.ui.subscription.SubscriptionPlanScreen
 import ac.sbmax002.eye_on.navigation.Routes
 
 /**
@@ -131,6 +133,9 @@ fun EyeOnApp(
                 },
                 onNavigateToAccount = {
                     navController.navigate(Routes.ACCOUNT)
+                },
+                onNavigateToSubscription = {
+                    navController.navigate(Routes.SUBSCRIPTION_STATUS)
                 }
             )
         }
@@ -160,6 +165,9 @@ fun EyeOnApp(
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
+                },
+                onNavigateToSubscription = {
+                    navController.navigate(Routes.SUBSCRIPTION_STATUS)
                 }
             )
         }
@@ -167,6 +175,23 @@ fun EyeOnApp(
         // 8. 회원 정보 수정 화면
         composable(Routes.EDIT_PROFILE) {
             EditProfileScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 9. 구독 상태 화면
+        composable(Routes.SUBSCRIPTION_STATUS) {
+            SubscriptionStatusScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPlan = {
+                    navController.navigate(Routes.SUBSCRIPTION_PLAN)
+                }
+            )
+        }
+
+        // 10. 요금제 선택 화면
+        composable(Routes.SUBSCRIPTION_PLAN) {
+            SubscriptionPlanScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
