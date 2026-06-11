@@ -37,6 +37,7 @@ fun SettingsScreen(
     onNavigateToLevel2Alert: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
     onNavigateToSubscription: () -> Unit = {},
+    onNavigateToBlockedApps: () -> Unit = {},
     subscriptionRepository: SubscriptionRepository? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -204,6 +205,29 @@ fun SettingsScreen(
                     checked = uiState.vibrationEnabled,
                     onCheckedChange = { viewModel.toggleVibration() }
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToBlockedApps)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "스터디 앱 차단 설정",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = (-0.31).sp
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Color(0xFF99A1AF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

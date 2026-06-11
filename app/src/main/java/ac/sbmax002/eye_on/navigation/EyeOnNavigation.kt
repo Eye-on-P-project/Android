@@ -18,6 +18,7 @@ import ac.sbmax002.eye_on.ui.settings.Level1AlertScreen
 import ac.sbmax002.eye_on.ui.settings.Level2AlertScreen
 import ac.sbmax002.eye_on.ui.settings.AccountScreen
 import ac.sbmax002.eye_on.ui.settings.EditProfileScreen
+import ac.sbmax002.eye_on.ui.settings.BlockedAppsScreen
 import ac.sbmax002.eye_on.ui.subscription.SubscriptionStatusScreen
 import ac.sbmax002.eye_on.ui.subscription.SubscriptionPlanScreen
 import ac.sbmax002.eye_on.navigation.Routes
@@ -136,6 +137,9 @@ fun EyeOnApp(
                 },
                 onNavigateToSubscription = {
                     navController.navigate(Routes.SUBSCRIPTION_STATUS)
+                },
+                onNavigateToBlockedApps = {
+                    navController.navigate(Routes.BLOCKED_APPS)
                 }
             )
         }
@@ -192,6 +196,13 @@ fun EyeOnApp(
         // 10. 요금제 선택 화면
         composable(Routes.SUBSCRIPTION_PLAN) {
             SubscriptionPlanScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 11. 스터디 앱 차단 화면
+        composable(Routes.BLOCKED_APPS) {
+            BlockedAppsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

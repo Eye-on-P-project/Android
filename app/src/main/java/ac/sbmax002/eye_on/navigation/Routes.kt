@@ -20,6 +20,7 @@ object Routes {
     const val LEVEL2_ALERT = "level2_alert"
     const val SUBSCRIPTION_STATUS = "subscription_status"
     const val SUBSCRIPTION_PLAN = "subscription_plan"
+    const val BLOCKED_APPS = "blocked_apps"
     
     /**
      * 상세 화면으로 이동하는 경로 생성

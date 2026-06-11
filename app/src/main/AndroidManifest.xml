@@ -11,6 +11,17 @@
     <!-- Foreground Service 권한 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    
+    <!-- 사용 정보 접근 권한 (포그라운드 앱 감지용) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+
+    <!-- 패키지 가시성 설정 (설치된 앱 검색용) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <!-- 카메라 하드웨어 -->
     <uses-feature
@@ -41,6 +52,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- 앱 차단 화면 -->
+        <activity
+            android:name=".ui.settings.BlockedAppActivity"
+            android:theme="@style/Theme.Eye_on"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:exported="false" />
         
         <!-- 모니터링 서비스 -->
         <service

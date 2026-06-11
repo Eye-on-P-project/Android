@@ -20,6 +20,7 @@ import ac.sbmax002.eye_on.repository.SettingsRepository
 import ac.sbmax002.eye_on.ui.settings.AlarmSound
 import ac.sbmax002.eye_on.ui.settings.DrowsinessSensitivity
 import ac.sbmax002.eye_on.repository.AppStateRepository
+import ac.sbmax002.eye_on.ui.home.AppMode
 import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.MonitoringStartRequest
 import ac.sbmax002.eye_on.network.MonitoringEndRequest
@@ -220,6 +221,11 @@ class MonitoringService : Service(), PipelineListener {
                     Log.e(TAG, "Error starting server session", e)
                 }
                 
+                // 스터디 모드용 앱 차단 기능 연동
+                if (AppStateRepository.getCurrentAppMode() == AppMode.STUDY) {
+                    StudyBlockManager.start(applicationContext)
+                }
+
                 Log.d(TAG, "Monitoring started successfully")
                 
             } catch (e: Exception) {
@@ -235,6 +241,9 @@ class MonitoringService : Service(), PipelineListener {
         Log.d(TAG, "Stopping monitoring...")
         
         isMonitoringStarted = false
+        
+        // 스터디 앱 차단 감시 중지
+        StudyBlockManager.stop()
         
         cameraManager?.stopCamera()
         cameraManager = null
