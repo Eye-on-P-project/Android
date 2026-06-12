@@ -116,4 +116,8 @@ object NetworkConfig {
     val monitoringApiService: MonitoringApiService by lazy {
         retrofit.create(MonitoringApiService::class.java)
     }
+
+    val agentApiService: AgentApiService by lazy {
+        retrofit.create(AgentApiService::class.java)
+    }
 }
