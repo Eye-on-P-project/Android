@@ -1,6 +1,7 @@
 package ac.sbmax002.eye_on.ui.home
 
 
+import android.Manifest
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,9 +29,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import ac.sbmax002.eye_on.service.MonitoringService
 import ac.sbmax002.eye_on.DTO.DrowsinessState
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.speech.RecognizerIntent
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +52,65 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraPermissionGranted by viewModel.cameraPermissionGranted.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    fun createSpeechRecognitionIntent(): Intent {
+        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "AI 동승자에게 답변해 주세요")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+        }
+    }
+
+    val speechRecognitionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+
+        val recognizedText = result.data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+            ?.trim()
+
+        if (recognizedText.isNullOrBlank()) {
+            Toast.makeText(context, "음성을 인식하지 못했어요.", Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+
+        monitoringService?.askAgent(recognizedText)
+            ?: Toast.makeText(context, "모니터링 서비스가 아직 연결되지 않았어요.", Toast.LENGTH_SHORT).show()
+    }
+
+    fun launchSpeechRecognition() {
+        try {
+            speechRecognitionLauncher.launch(createSpeechRecognitionIntent())
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "사용 가능한 음성 인식 앱이 없어요.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchSpeechRecognition()
+        } else {
+            Toast.makeText(context, "마이크 권한이 필요해요.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun requestAgentReply() {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            launchSpeechRecognition()
+        } else {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -59,8 +127,6 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             val isCameraReady = cameraPermissionGranted && uiState.isReady
-
-            val context = LocalContext.current
             
             if (uiState.isMonitoring) {
                 // 모니터링 중일 때: 프리뷰는 위에, 버튼은 아래에
@@ -99,6 +165,9 @@ fun HomeScreen(
                     },
                     onAcknowledgeWake = {
                         MonitoringService.acknowledgeWake(context)
+                    },
+                    onAskAgentReply = {
+                        requestAgentReply()
                     },
                     isCameraReady = isCameraReady,
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -316,6 +385,7 @@ private fun MonitoringView(
     onStopMonitoring: () -> Unit,
     onSwitchToFloating: () -> Unit,
     onAcknowledgeWake: () -> Unit,
+    onAskAgentReply: () -> Unit,
     isCameraReady: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -358,6 +428,15 @@ private fun MonitoringView(
                     backgroundColor = appModePrimaryColor(uiState.appMode),
                     disabledBackgroundColor = Color(0xFF424242),
                     text = "플로팅 모드로 전환",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                AnimatedButton(
+                    onClick = onAskAgentReply,
+                    enabled = true,
+                    backgroundColor = Color(0xFF7C4DFF),
+                    disabledBackgroundColor = Color(0xFF424242),
+                    text = "AI에게 대답하기",
                     modifier = Modifier.fillMaxWidth()
                 )
 

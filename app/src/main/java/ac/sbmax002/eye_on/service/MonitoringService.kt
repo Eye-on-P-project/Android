@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import ac.sbmax002.eye_on.MainActivity
@@ -25,6 +26,7 @@ import ac.sbmax002.eye_on.network.MonitoringStartRequest
 import ac.sbmax002.eye_on.network.MonitoringEndRequest
 import ac.sbmax002.eye_on.network.MonitoringEventRequest
 import ac.sbmax002.eye_on.network.TokenRequest
+import ac.sbmax002.eye_on.network.AgentChatRequest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
@@ -55,6 +57,7 @@ class MonitoringService : Service(), PipelineListener {
     private var settingsRepository: SettingsRepository? = null
     private var settingsJob: Job? = null
     private var alarmPlayer: AlarmPlayer? = null
+    private var voiceCompanion: VoiceCompanion? = null
     
     private var isMonitoringStarted = false
     
@@ -62,10 +65,33 @@ class MonitoringService : Service(), PipelineListener {
     private var serverSessionId: Long? = null
 
     private var currentAlarmLevel: AlarmLevel = AlarmLevel.NONE
+    private var latestDrowsinessState: DrowsinessState = DrowsinessState.NORMAL
+    private var level1HandledByAgent: Boolean = false
+    private var agentConfigLoaded: Boolean = false
+    private var agentEnabled: Boolean = false
+    private var agentMode: String = "PASSIVE"
+    private var agentCooldownMillis: Long = DEFAULT_AGENT_COOLDOWN_MILLIS
+    private var lastAgentPromptAtMs: Long = 0L
+    private var lastAgentPromptDrivingState: String = "NORMAL"
     private var level1AlarmSound: AlarmSound = AlarmSound.BELL_NOTIFICATION
     private var level2AlarmSound: AlarmSound = AlarmSound.SIREN
     private var level1Volume: Int = 70
     private var level2Volume: Int = 100
+    private val agentConversationTurns = ArrayDeque<AgentConversationTurn>()
+
+    private val drowsyPrompts = listOf(
+        "눈이 조금 무거워 보여요. 괜찮아요?",
+        "졸음 신호가 보여요. 창문을 조금 열어볼까요?",
+        "잠깐 집중이 흐려진 것 같아요. 가까운 곳에서 쉬어가도 좋아요. ",
+        "방금 살짝 졸았어요. 지금 상태 괜찮아요?"
+    )
+
+    private val sleepRecoveryPrompts = listOf(
+        "괜찮아요? 방금 수면 신호가 있었어요. 잠깐 쉬어가는 게 좋아요.",
+        "방금 눈을 오래 감고 있었어요. 지금은 가까운 곳에서 쉬어가는 게 안전해요.",
+        "다시 깨어난 것 같아요. 무리하지 말고 잠깐 정차해서 컨디션을 확인해요.",
+        "수면 신호가 감지됐어요. 괜찮아요?"
+    )
 
     // 파이프라인 결과를 Activity/HomeViewModel로 전달하기 위한 콜백
     private var pipelineResultListener: ((PipelineResult) -> Unit)? = null
@@ -150,6 +176,10 @@ class MonitoringService : Service(), PipelineListener {
                     drowsyDurationMs = initialDuration
                 )
                 alarmPlayer = AlarmPlayer(applicationContext)
+                voiceCompanion = VoiceCompanion(applicationContext)
+                serviceScope.launch {
+                    refreshAgentConfig()
+                }
                 settingsJob = serviceScope.launch {
                     settingsRepo.let { repo ->
                         combine(
@@ -244,6 +274,9 @@ class MonitoringService : Service(), PipelineListener {
         settingsJob = null
         stopAlarm()
         alarmPlayer = null
+        voiceCompanion?.shutdown()
+        voiceCompanion = null
+        resetAgentRuntimeState()
         
         // 플로팅 윈도우 제거
         floatingWindowManager?.removeFloatingWindow()
@@ -330,6 +363,7 @@ class MonitoringService : Service(), PipelineListener {
     
     override fun onPipelineResult(result: PipelineResult) {
         Log.d(TAG, "Pipeline result: drowsinessState=${result.drowsinessState}, faceDetected=${result.isFaceDetected}")
+        latestDrowsinessState = result.drowsinessState
 
         // 얼굴 감지 여부와 졸음 상태에 따른 플로팅 아이콘 업데이트
         floatingWindowManager?.updateState(
@@ -372,6 +406,60 @@ class MonitoringService : Service(), PipelineListener {
         floatingWindowManager?.showFloatingWindowIfExists()
     }
 
+    fun askAgent(message: String) {
+        val normalizedMessage = message.trim()
+        if (normalizedMessage.isBlank()) return
+
+        serviceScope.launch {
+            try {
+                if (!agentEnabled) {
+                    refreshAgentConfig()
+                }
+
+                val request = AgentChatRequest(
+                    message = createAgentMessage(normalizedMessage),
+                    drivingState = currentAgentDrivingState()
+                )
+                Log.d(TAG, "Sending agent chat. drivingState=${request.drivingState}")
+                val response = NetworkConfig.agentApiService.chat(request)
+
+                if (latestDrowsinessState == DrowsinessState.SLEEPING || currentAlarmLevel == AlarmLevel.LEVEL2) {
+                    Log.d(TAG, "Skip agent reply because sleep alarm is active.")
+                    return@launch
+                }
+
+                val reply = if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    val serverReply = responseBody?.reply?.takeIf { it.isNotBlank() }
+                    Log.d(
+                        TAG,
+                        "Agent chat response source=${responseBody?.source ?: "UNKNOWN"}, reply=${serverReply ?: "<empty>"}"
+                    )
+                    serverReply ?: fallbackAgentReply()
+                } else {
+                    logHttpFailure("Failed to chat with agent", response)
+                    if (response.code() == 403) {
+                        "AI 동승자 기능은 구독 사용자만 사용할 수 있어요."
+                    } else {
+                        fallbackAgentReply()
+                    }
+                }
+
+                rememberAgentTurn("사용자", normalizedMessage)
+                rememberAgentTurn("AI", reply)
+                voiceCompanion?.speak(reply)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error asking agent", e)
+                if (latestDrowsinessState != DrowsinessState.SLEEPING && currentAlarmLevel != AlarmLevel.LEVEL2) {
+                    val reply = fallbackAgentReply()
+                    rememberAgentTurn("사용자", normalizedMessage)
+                    rememberAgentTurn("AI", reply)
+                    voiceCompanion?.speak(reply)
+                }
+            }
+        }
+    }
+
     private fun handleAlarm(result: PipelineResult) {
         val targetLevel = when {
             result.isFaceDetected && result.drowsinessState == DrowsinessState.NORMAL -> AlarmLevel.NONE
@@ -382,17 +470,36 @@ class MonitoringService : Service(), PipelineListener {
         }
 
         if (targetLevel == AlarmLevel.NONE) {
-            if (currentAlarmLevel != AlarmLevel.NONE) {
-                recordServerEvent(currentAlarmLevel, targetLevel)
+            val previousLevel = currentAlarmLevel
+            if (previousLevel != AlarmLevel.NONE) {
+                recordServerEvent(previousLevel, targetLevel)
             }
             stopAlarm()
+            if (previousLevel == AlarmLevel.LEVEL2 &&
+                result.isFaceDetected &&
+                result.drowsinessState == DrowsinessState.NORMAL
+            ) {
+                trySpeakSleepRecoveryPrompt()
+            }
             return
         }
 
         if (targetLevel != currentAlarmLevel) {
+            if (targetLevel == AlarmLevel.LEVEL2) {
+                voiceCompanion?.stop()
+            }
+
             when (targetLevel) {
-                AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
-                AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
+                AlarmLevel.LEVEL1 -> {
+                    level1HandledByAgent = trySpeakDrowsyPrompt()
+                    if (!level1HandledByAgent) {
+                        alarmPlayer?.play(level1AlarmSound, level1Volume)
+                    }
+                }
+                AlarmLevel.LEVEL2 -> {
+                    level1HandledByAgent = false
+                    alarmPlayer?.play(level2AlarmSound, level2Volume)
+                }
                 else -> {}
             }
             
@@ -404,6 +511,10 @@ class MonitoringService : Service(), PipelineListener {
         }
 
         // 같은 단계가 유지되지만 플레이어가 멈췄다면 재개
+        if (targetLevel == AlarmLevel.LEVEL1 && level1HandledByAgent) {
+            return
+        }
+
         if (alarmPlayer?.isPlaying() != true) {
             when (targetLevel) {
                 AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
@@ -477,7 +588,9 @@ class MonitoringService : Service(), PipelineListener {
 
     private fun refreshAlarmIfNeeded() {
         when (currentAlarmLevel) {
-            AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
+            AlarmLevel.LEVEL1 -> if (!level1HandledByAgent) {
+                alarmPlayer?.play(level1AlarmSound, level1Volume)
+            }
             AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
             else -> {}
         }
@@ -486,11 +599,13 @@ class MonitoringService : Service(), PipelineListener {
     private fun stopAlarm() {
         alarmPlayer?.stop()
         currentAlarmLevel = AlarmLevel.NONE
+        level1HandledByAgent = false
     }
 
     private fun acknowledgeWake() {
         Log.d(TAG, "Acknowledge wake requested")
         stopAlarm()
+        voiceCompanion?.stop()
 
         // UI를 즉시 정상 상태로 전환 (다음 프레임에서 다시 판정됨)
         val normalized = PipelineResult(
@@ -502,6 +617,152 @@ class MonitoringService : Service(), PipelineListener {
         )
         floatingWindowManager?.updateState(true, DrowsinessState.NORMAL)
         pipelineResultListener?.invoke(normalized)
+    }
+
+    private suspend fun refreshAgentConfig() {
+        try {
+            val response = NetworkConfig.agentApiService.getConfig()
+            if (response.isSuccessful) {
+                agentConfigLoaded = true
+                response.body()?.let { config ->
+                    agentEnabled = config.enabled
+                    agentMode = config.mode
+                    agentCooldownMillis = config.cooldownSeconds
+                        .coerceAtLeast(0)
+                        .times(1_000L)
+                        .takeIf { it > 0L }
+                        ?: DEFAULT_AGENT_COOLDOWN_MILLIS
+                    Log.d(TAG, "Agent config loaded: enabled=$agentEnabled, mode=$agentMode, cooldownMs=$agentCooldownMillis")
+                }
+            } else {
+                agentConfigLoaded = true
+                agentEnabled = false
+                logHttpFailure("Failed to load agent config", response)
+            }
+        } catch (e: Exception) {
+            agentConfigLoaded = false
+            agentEnabled = false
+            Log.e(TAG, "Error loading agent config", e)
+        }
+    }
+
+    private fun trySpeakDrowsyPrompt(): Boolean {
+        if (!canUseLocalAgentPrompt()) {
+            return false
+        }
+
+        val currentTimeMs = SystemClock.elapsedRealtime()
+        if (currentTimeMs - lastAgentPromptAtMs < agentCooldownMillis) {
+            return lastAgentPromptAtMs > 0L &&
+                currentTimeMs - lastAgentPromptAtMs <= AGENT_REPLY_WINDOW_MILLIS
+        }
+
+        val speaker = voiceCompanion ?: return false
+        if (speaker.isSpeaking()) {
+            Log.d(TAG, "Skip local drowsy prompt because TTS is already speaking.")
+            return true
+        }
+
+        lastAgentPromptAtMs = currentTimeMs
+        lastAgentPromptDrivingState = "DROWSY"
+        val prompt = drowsyPrompts.random()
+        rememberAgentTurn("AI", prompt)
+        speaker.speak(prompt)
+        return true
+    }
+
+    private fun trySpeakSleepRecoveryPrompt(): Boolean {
+        if (!canUseLocalAgentPrompt()) {
+            return false
+        }
+
+        val currentTimeMs = SystemClock.elapsedRealtime()
+        if (currentTimeMs - lastAgentPromptAtMs < agentCooldownMillis) {
+            return lastAgentPromptAtMs > 0L &&
+                currentTimeMs - lastAgentPromptAtMs <= AGENT_REPLY_WINDOW_MILLIS
+        }
+
+        val speaker = voiceCompanion ?: return false
+        if (speaker.isSpeaking()) {
+            Log.d(TAG, "Skip local sleep recovery prompt because TTS is already speaking.")
+            return true
+        }
+
+        lastAgentPromptAtMs = currentTimeMs
+        lastAgentPromptDrivingState = "SLEEP"
+        val prompt = sleepRecoveryPrompts.random()
+        rememberAgentTurn("AI", prompt)
+        speaker.speak(prompt)
+        return true
+    }
+
+    private fun canUseLocalAgentPrompt(): Boolean {
+        return !agentConfigLoaded || (agentEnabled && agentMode.equals("PROACTIVE", ignoreCase = true))
+    }
+
+    private fun currentAgentDrivingState(): String {
+        val currentTimeMs = SystemClock.elapsedRealtime()
+        val isReplyingToRecentDrowsyPrompt =
+            lastAgentPromptAtMs > 0L &&
+                currentTimeMs - lastAgentPromptAtMs <= AGENT_REPLY_WINDOW_MILLIS &&
+                latestDrowsinessState != DrowsinessState.SLEEPING
+
+        if (isReplyingToRecentDrowsyPrompt) {
+            return lastAgentPromptDrivingState
+        }
+
+        return when (latestDrowsinessState) {
+            DrowsinessState.NORMAL -> "NORMAL"
+            DrowsinessState.DROWSY -> "DROWSY"
+            DrowsinessState.SLEEPING -> "SLEEP"
+        }
+    }
+
+    private fun createAgentMessage(userMessage: String): String {
+        if (agentConversationTurns.isEmpty()) {
+            return userMessage
+        }
+
+        val recentContext = agentConversationTurns.joinToString(separator = "\n") { turn ->
+            "${turn.speaker}: ${turn.text}"
+        }
+        return """
+            최근 대화:
+            $recentContext
+
+            현재 사용자 말:
+            $userMessage
+            """.trimIndent().takeLast(MAX_AGENT_MESSAGE_LENGTH)
+    }
+
+    private fun rememberAgentTurn(speaker: String, text: String) {
+        val normalizedText = text.replace(Regex("\\s+"), " ").trim()
+        if (normalizedText.isBlank()) return
+
+        agentConversationTurns.addLast(AgentConversationTurn(speaker, normalizedText))
+        while (agentConversationTurns.size > MAX_AGENT_TURNS) {
+            agentConversationTurns.removeFirst()
+        }
+    }
+
+    private fun fallbackAgentReply(): String {
+        return when (latestDrowsinessState) {
+            DrowsinessState.SLEEPING -> "지금은 대화보다 안전이 먼저예요. 가능한 곳에 정차해 쉬어가요."
+            DrowsinessState.DROWSY -> "좋아요. 지금은 창문을 조금 열고, 가까운 곳에서 잠깐 쉬어가는 게 좋아요."
+            DrowsinessState.NORMAL -> "좋아요. 제가 옆에서 같이 집중할게요. 필요하면 편하게 말 걸어주세요."
+        }
+    }
+
+    private fun resetAgentRuntimeState() {
+        agentConfigLoaded = false
+        agentEnabled = false
+        agentMode = "PASSIVE"
+        agentCooldownMillis = DEFAULT_AGENT_COOLDOWN_MILLIS
+        lastAgentPromptAtMs = 0L
+        lastAgentPromptDrivingState = "NORMAL"
+        latestDrowsinessState = DrowsinessState.NORMAL
+        level1HandledByAgent = false
+        agentConversationTurns.clear()
     }
 
     private fun currentKstTimestampString(): String {
@@ -516,6 +777,11 @@ class MonitoringService : Service(), PipelineListener {
         val level2Volume: Int
     )
 
+    private data class AgentConversationTurn(
+        val speaker: String,
+        val text: String
+    )
+
     private enum class AlarmLevel { NONE, LEVEL1, LEVEL2 }
     
     companion object {
@@ -524,6 +790,10 @@ class MonitoringService : Service(), PipelineListener {
         private const val CHANNEL_ID = "monitoring_channel"
         private const val CHANNEL_NAME = "모니터링"
         private const val CHANNEL_DESCRIPTION = "졸음 감지 모니터링 중"
+        private const val DEFAULT_AGENT_COOLDOWN_MILLIS = 30_000L
+        private const val AGENT_REPLY_WINDOW_MILLIS = 15_000L
+        private const val MAX_AGENT_TURNS = 6
+        private const val MAX_AGENT_MESSAGE_LENGTH = 1_000
         private val APP_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
         private val KST_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
         
