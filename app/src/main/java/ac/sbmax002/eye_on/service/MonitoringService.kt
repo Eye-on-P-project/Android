@@ -66,7 +66,7 @@ class MonitoringService : Service(), PipelineListener {
 
     private var currentAlarmLevel: AlarmLevel = AlarmLevel.NONE
     private var latestDrowsinessState: DrowsinessState = DrowsinessState.NORMAL
-    private var level1HandledByAgent: Boolean = false
+    private var currentAlertHandledByVoice: Boolean = false
     private var agentConfigLoaded: Boolean = false
     private var agentEnabled: Boolean = false
     private var agentMode: String = "PASSIVE"
@@ -488,40 +488,17 @@ class MonitoringService : Service(), PipelineListener {
             if (targetLevel == AlarmLevel.LEVEL2) {
                 voiceCompanion?.stop()
             }
-
-            when (targetLevel) {
-                AlarmLevel.LEVEL1 -> {
-                    level1HandledByAgent = trySpeakDrowsyPrompt()
-                    if (!level1HandledByAgent) {
-                        alarmPlayer?.play(level1AlarmSound, level1Volume)
-                    }
-                }
-                AlarmLevel.LEVEL2 -> {
-                    level1HandledByAgent = false
-                    alarmPlayer?.play(level2AlarmSound, level2Volume)
-                }
-                else -> {}
-            }
             
             // 서버 이벤트 기록
             recordServerEvent(currentAlarmLevel, targetLevel)
             
             currentAlarmLevel = targetLevel
+            currentAlertHandledByVoice = false
+            maybeSpeakAlertPrompt()
             return
         }
 
-        // 같은 단계가 유지되지만 플레이어가 멈췄다면 재개
-        if (targetLevel == AlarmLevel.LEVEL1 && level1HandledByAgent) {
-            return
-        }
-
-        if (alarmPlayer?.isPlaying() != true) {
-            when (targetLevel) {
-                AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
-                AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
-                else -> {}
-            }
-        }
+        maybeSpeakAlertPrompt()
     }
 
     private fun recordServerEvent(oldLevel: AlarmLevel, newLevel: AlarmLevel) {
@@ -586,20 +563,38 @@ class MonitoringService : Service(), PipelineListener {
         }
     }
 
-    private fun refreshAlarmIfNeeded() {
-        when (currentAlarmLevel) {
-            AlarmLevel.LEVEL1 -> if (!level1HandledByAgent) {
-                alarmPlayer?.play(level1AlarmSound, level1Volume)
-            }
-            AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
-            else -> {}
+    private fun maybeSpeakAlertPrompt() {
+        if (currentAlarmLevel == AlarmLevel.NONE || currentAlertHandledByVoice) return
+
+        val handledByVoice = when (currentAlarmLevel) {
+            AlarmLevel.LEVEL1 -> trySpeakDrowsyPrompt()
+            AlarmLevel.LEVEL2 -> false
+            else -> false
         }
+
+        if (handledByVoice) {
+            currentAlertHandledByVoice = true
+            alarmPlayer?.stop()
+            return
+        }
+
+        if (alarmPlayer?.isPlaying() != true) {
+            when (currentAlarmLevel) {
+                AlarmLevel.LEVEL1 -> alarmPlayer?.play(level1AlarmSound, level1Volume)
+                AlarmLevel.LEVEL2 -> alarmPlayer?.play(level2AlarmSound, level2Volume)
+                else -> {}
+            }
+        }
+    }
+
+    private fun refreshAlarmIfNeeded() {
+        maybeSpeakAlertPrompt()
     }
 
     private fun stopAlarm() {
         alarmPlayer?.stop()
         currentAlarmLevel = AlarmLevel.NONE
-        level1HandledByAgent = false
+        currentAlertHandledByVoice = false
     }
 
     private fun acknowledgeWake() {
@@ -647,14 +642,9 @@ class MonitoringService : Service(), PipelineListener {
     }
 
     private fun trySpeakDrowsyPrompt(): Boolean {
-        if (!canUseLocalAgentPrompt()) {
-            return false
-        }
-
         val currentTimeMs = SystemClock.elapsedRealtime()
         if (currentTimeMs - lastAgentPromptAtMs < agentCooldownMillis) {
-            return lastAgentPromptAtMs > 0L &&
-                currentTimeMs - lastAgentPromptAtMs <= AGENT_REPLY_WINDOW_MILLIS
+            return true
         }
 
         val speaker = voiceCompanion ?: return false
@@ -672,16 +662,7 @@ class MonitoringService : Service(), PipelineListener {
     }
 
     private fun trySpeakSleepRecoveryPrompt(): Boolean {
-        if (!canUseLocalAgentPrompt()) {
-            return false
-        }
-
         val currentTimeMs = SystemClock.elapsedRealtime()
-        if (currentTimeMs - lastAgentPromptAtMs < agentCooldownMillis) {
-            return lastAgentPromptAtMs > 0L &&
-                currentTimeMs - lastAgentPromptAtMs <= AGENT_REPLY_WINDOW_MILLIS
-        }
-
         val speaker = voiceCompanion ?: return false
         if (speaker.isSpeaking()) {
             Log.d(TAG, "Skip local sleep recovery prompt because TTS is already speaking.")
@@ -694,10 +675,6 @@ class MonitoringService : Service(), PipelineListener {
         rememberAgentTurn("AI", prompt)
         speaker.speak(prompt)
         return true
-    }
-
-    private fun canUseLocalAgentPrompt(): Boolean {
-        return !agentConfigLoaded || (agentEnabled && agentMode.equals("PROACTIVE", ignoreCase = true))
     }
 
     private fun currentAgentDrivingState(): String {
@@ -761,7 +738,7 @@ class MonitoringService : Service(), PipelineListener {
         lastAgentPromptAtMs = 0L
         lastAgentPromptDrivingState = "NORMAL"
         latestDrowsinessState = DrowsinessState.NORMAL
-        level1HandledByAgent = false
+        currentAlertHandledByVoice = false
         agentConversationTurns.clear()
     }
 

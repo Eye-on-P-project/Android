@@ -52,8 +52,8 @@ enum class DrowsinessSensitivity(
     val displayName: String,
     val drowsyDurationMs: Long
 ) {
-    HIGH("높음", 500L),
-    LOW("낮음", 700L)
+    HIGH("높음", 1_500L),
+    LOW("낮음", 2_500L)
 }
 
 /**
@@ -64,4 +64,3 @@ enum class FloatingIconSize(val displayName: String) {
     MEDIUM("중간"),
     LARGE("크게")
 }
-

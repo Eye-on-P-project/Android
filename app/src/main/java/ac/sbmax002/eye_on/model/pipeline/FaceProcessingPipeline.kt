@@ -1,7 +1,5 @@
 package ac.sbmax002.eye_on.model.pipeline
 
-import ac.sbmax002.eye_on.DTO.DrowsinessState
-import ac.sbmax002.eye_on.model.inference.SleepModelRunner
 import ac.sbmax002.eye_on.model.vision.FaceLandmarkerHelper
 import android.content.Context
 import android.util.Log
@@ -10,14 +8,13 @@ import androidx.camera.core.ImageProxy
 class FaceProcessingPipeline(
     context: Context,
     private val listener: PipelineListener,
-    private val drowsyDurationMs: Long = 1_000L,
-    private val temporalConfig: TemporalDetectionConfig = TemporalDetectionConfig()
-) : FaceLandmarkerHelper.LandmarkerListener {
-
-    private val temporalDetector = TemporalDrowsinessDetector(
-        modelRunner = SleepModelRunner(context.applicationContext),
-        config = temporalConfig
+    drowsyDurationMs: Long = 1_000L,
+    private val roiExtractor: RoiExtractor = RoiExtractor(),
+    private val earCalculator: EarCalculator = EarCalculator(),
+    private val drowsinessDetector: DrowsinessDetector = DrowsinessDetector(
+        drowsyDurationMs = drowsyDurationMs
     )
+) : FaceLandmarkerHelper.LandmarkerListener {
 
     private val faceLandmarkerHelper = FaceLandmarkerHelper(
         context = context.applicationContext,
@@ -39,11 +36,12 @@ class FaceProcessingPipeline(
     }
 
     fun reset() {
-        temporalDetector.reset()
+        drowsinessDetector.reset()
     }
 
     fun updateDrowsyDuration(newDurationMs: Long) {
-        Log.d(TAG, "updateDrowsyDuration ignored by temporal model: $newDurationMs")
+        Log.d(TAG, "updateDrowsyDuration=$newDurationMs")
+        drowsinessDetector.updateDrowsyDuration(newDurationMs)
     }
 
     override fun onError(error: String, errorCode: Int) {
@@ -61,30 +59,34 @@ class FaceProcessingPipeline(
                     isFaceDetected = false,
                     leftEye = null,
                     rightEye = null,
-                    drowsinessState = temporalDetector.currentState()
+                    drowsinessState = drowsinessDetector.currentState()
                 )
             )
             return
         }
 
-        val output = temporalDetector.update(
-            bitmap = resultBundle.bitmap,
-            landmarks = faceResult.faceLandmarks()[0],
-            timestampMs = timestampMs,
-            faceLandmarkerMs = resultBundle.inferenceTime
+        val eyeRoi = roiExtractor.extractEyeRoi(faceResult.faceLandmarks()[0])
+        val leftEar = eyeRoi.leftEyePoints.takeIf { it.isNotEmpty() }
+            ?.let { earCalculator.calculateEar(it) }
+        val rightEar = eyeRoi.rightEyePoints.takeIf { it.isNotEmpty() }
+            ?.let { earCalculator.calculateEar(it) }
+        val drowsinessState = drowsinessDetector.update(
+            leftEar = leftEar,
+            rightEar = rightEar,
+            frameTimestampMs = timestampMs
         )
 
         listener.onPipelineResult(
             PipelineResult(
                 frameTimestampMs = timestampMs,
                 isFaceDetected = true,
-                leftEye = output.leftEar?.let {
-                    EyeState(ear = it, isClosed = output.leftClosed)
+                leftEye = leftEar?.let { ear ->
+                    EyeState(ear = ear, isClosed = drowsinessDetector.isEyeClosed(ear))
                 },
-                rightEye = output.rightEar?.let {
-                    EyeState(ear = it, isClosed = output.rightClosed)
+                rightEye = rightEar?.let { ear ->
+                    EyeState(ear = ear, isClosed = drowsinessDetector.isEyeClosed(ear))
                 },
-                drowsinessState = output.state
+                drowsinessState = drowsinessState
             )
         )
     }
@@ -96,7 +98,7 @@ class FaceProcessingPipeline(
                 isFaceDetected = false,
                 leftEye = null,
                 rightEye = null,
-                drowsinessState = temporalDetector.currentState()
+                drowsinessState = drowsinessDetector.currentState()
             )
         )
     }
