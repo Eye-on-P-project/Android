@@ -1,45 +1,78 @@
 package ac.sbmax002.eye_on.ui.home
 
-
 import android.Manifest
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.AlarmOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.painterResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.platform.LocalContext
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import ac.sbmax002.eye_on.service.MonitoringService
-import ac.sbmax002.eye_on.DTO.DrowsinessState
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.speech.RecognizerIntent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AlarmOff
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ac.sbmax002.eye_on.DTO.DrowsinessState
+import ac.sbmax002.eye_on.service.MonitoringService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,10 +134,9 @@ fun HomeScreen(
     }
 
     fun requestAgentReply() {
-        if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
+        if (
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
         ) {
             launchSpeechRecognition()
         } else {
@@ -119,7 +151,7 @@ fun HomeScreen(
                 onSettingsClick = onNavigateToSettings
             )
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = modifier
@@ -127,17 +159,14 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             val isCameraReady = cameraPermissionGranted && uiState.isReady
-            
+
             if (uiState.isMonitoring) {
-                // 모니터링 중일 때: 프리뷰는 위에, 버튼은 아래에
-                
-                // 카메라 프리뷰를 Top bar 밑에 배치
                 key("shared_camera_preview") {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                            .padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
                         CameraPreviewContainer(
                             isReady = isCameraReady,
@@ -151,8 +180,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                
-                // MonitoringView를 하단에 배치
+
                 MonitoringView(
                     uiState = uiState,
                     onStopMonitoring = {
@@ -173,27 +201,24 @@ fun HomeScreen(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             } else {
-                // 모니터링 시작 전: 기존 레이아웃 유지
                 ReadyView(
                     uiState = uiState,
                     cameraPermissionGranted = cameraPermissionGranted,
                     onStartMonitoring = {
                         viewModel.startMonitoring()
                         MonitoringService.startMonitoring(context)
-                        // 바로 플로팅 모드로 전환
                         (context as? Activity)?.moveTaskToBack(true)
                     },
                     onModeSelected = { mode -> viewModel.selectMode(mode) },
                     isCameraReady = isCameraReady
                 )
-                
-                // 카메라 프리뷰를 중앙에 배치
+
                 key("shared_camera_preview") {
                     Box(
                         modifier = Modifier
                             .align(Alignment.Center)
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
+                            .padding(horizontal = 20.dp)
                     ) {
                         CameraPreviewContainer(
                             isReady = isCameraReady,
@@ -218,93 +243,78 @@ private fun HomeTopBar(
     onStatisticsClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
-    Surface(
-        color = Color(0xFF1A1A1A),
-        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-        shadowElevation = 8.dp,
-        tonalElevation = 0.dp
-    ) {
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    // 로고 아이콘 박스
                     Box(
-                        modifier = Modifier
-                            .size(32.dp),
+                        modifier = Modifier.size(36.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
                             painter = painterResource(id = ac.sbmax002.eye_on.R.drawable.logo),
-                            contentDescription = "Logo",
+                            contentDescription = "Eye:on",
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    Text(
-                        text = "Eye:on",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        letterSpacing = (-0.45).sp
-                    )
                 }
-            },
-            actions = {
-                IconButton(
-                    onClick = onStatisticsClick,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF2A2A2A),
-                                    Color(0xFF1F1F1F)
-                                )
-                            ),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BarChart,
-                        contentDescription = "Statistics",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = onSettingsClick,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF2A2A2A),
-                                    Color(0xFF1F1F1F)
-                                )
-                            ),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
+                Text(
+                    text = "Eye:on",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        },
+        actions = {
+            TopBarAction(
+                icon = Icons.Default.BarChart,
+                contentDescription = "통계",
+                onClick = onStatisticsClick
             )
+            Spacer(modifier = Modifier.width(6.dp))
+            TopBarAction(
+                icon = Icons.Default.Settings,
+                contentDescription = "설정",
+                onClick = onSettingsClick
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+        )
+    )
+}
+
+@Composable
+private fun TopBarAction(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
 
-
-// 모니터링 시작 버튼 누르기 전
 @Composable
 private fun ReadyView(
     uiState: HomeUiState,
@@ -316,11 +326,10 @@ private fun ReadyView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 상단: 모드 선택기
         AnimatedVisibility(
             visible = true,
             enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
@@ -329,7 +338,6 @@ private fun ReadyView(
             ),
             exit = fadeOut(animationSpec = tween(200))
         ) {
-            //
             ModeSelector(
                 selectedMode = uiState.appMode,
                 onModeSelected = onModeSelected,
@@ -339,46 +347,41 @@ private fun ReadyView(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 중앙: 카메라 프리뷰는 HomeScreen에서 관리하므로 여기서는 공간만 차지
-        // 실제 카메라는 HomeScreen 레벨에서 렌더링됨
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.75f))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.75f)
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 하단: 시작 버튼
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-                AnimatedButton(
-                    onClick = {
-                        android.util.Log.d("HomeScreen", "Start monitoring button clicked")
-                        onStartMonitoring()
-                    },
-                    // TODO: MediaPipe 연결 후 isFaceDetected 조건 다시 추가
-                    enabled = cameraPermissionGranted && uiState.isReady, // && uiState.isFaceDetected,
-                    backgroundColor = appModePrimaryColor(uiState.appMode),
-                    disabledBackgroundColor = Color(0xFF424242),
-                    text = "모니터링 시작",
-                    modifier = Modifier.fillMaxWidth()
-                )
+            AnimatedButton(
+                onClick = {
+                    android.util.Log.d("HomeScreen", "Start monitoring button clicked")
+                    onStartMonitoring()
+                },
+                enabled = cameraPermissionGranted && uiState.isReady,
+                backgroundColor = appModePrimaryColor(uiState.appMode),
+                disabledBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                text = "모니터링 시작",
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Text(
-                text = appModeGuideText(uiState.appMode),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color(0xFF757575),
-                textAlign = TextAlign.Center,
-                letterSpacing = 0.sp
+                text = if (isCameraReady) appModeGuideText(uiState.appMode) else "카메라 권한과 준비 상태를 확인하고 있어요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
-// 모니터링 시작 버튼 누르고 나서 화면
 @Composable
 private fun MonitoringView(
     uiState: HomeUiState,
@@ -392,41 +395,39 @@ private fun MonitoringView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 20.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp,
+            shadowElevation = 2.dp
         ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = "Monitoring in Progress",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        letterSpacing = (-0.44).sp
-                    )
+            Column(
+                modifier = Modifier.padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatusPill(
+                    text = if (isCameraReady) "모니터링 중 · 카메라 연결됨" else "모니터링 중 · 카메라 준비 중",
+                    color = appModePrimaryColor(uiState.appMode)
+                )
 
-                    Text(
-                        text = "플로팅 모드로 전환하여 다른 앱을 사용할 수 있습니다",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF99A1AF),
-                        textAlign = TextAlign.Center,
-                        letterSpacing = (-0.15).sp
-                    )
-                }
+                Text(
+                    text = "다른 앱을 사용해도 감지는 계속됩니다",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
 
                 AnimatedButton(
                     onClick = onSwitchToFloating,
                     enabled = true,
                     backgroundColor = appModePrimaryColor(uiState.appMode),
-                    disabledBackgroundColor = Color(0xFF424242),
+                    disabledBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                     text = "플로팅 모드로 전환",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -434,61 +435,57 @@ private fun MonitoringView(
                 AnimatedButton(
                     onClick = onAskAgentReply,
                     enabled = true,
-                    backgroundColor = Color(0xFF7C4DFF),
-                    disabledBackgroundColor = Color(0xFF424242),
+                    backgroundColor = Color(0xFF7C5CFF),
+                    disabledBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                     text = "AI에게 대답하기",
+                    icon = Icons.Default.Mic,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 AnimatedButton(
                     onClick = onStopMonitoring,
                     enabled = true,
-                    backgroundColor = Color(0xFFE53935),
-                    disabledBackgroundColor = Color(0xFF424242),
+                    backgroundColor = MaterialTheme.colorScheme.error,
+                    disabledBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                     text = "모니터링 종료",
+                    icon = Icons.Default.Stop,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Text(
                     text = appModeGuideText(uiState.appMode),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color(0xFF757575),
-                    textAlign = TextAlign.Center,
-                    letterSpacing = 0.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
+            }
         }
 
-        // 모니터링 화면에서 바로 알람 해제할 수 있는 중앙 오버레이 버튼
         if (uiState.currentDrowsinessState != DrowsinessState.NORMAL) {
             Box(
-                modifier = Modifier
-                    .matchParentSize(),
+                modifier = Modifier.matchParentSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Button(
                     onClick = onAcknowledgeWake,
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
+                        .fillMaxWidth(0.78f)
                         .heightIn(min = 56.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1E88E5),
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.AlarmOff,
                         contentDescription = "알람 해제",
-                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "알람 해제 (깨어났어요)",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = (-0.2).sp
+                        text = "알람 해제",
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
             }
@@ -496,20 +493,47 @@ private fun MonitoringView(
     }
 }
 
+@Composable
+private fun StatusPill(
+    text: String,
+    color: Color
+) {
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(999.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(
+                text = text,
+                color = color,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    }
+}
+
 private fun appModePrimaryColor(mode: AppMode): Color = when (mode) {
-    AppMode.DRIVING -> Color(0xFF007AFF)
-    AppMode.STUDY -> Color(0xFFFF9800)
-    AppMode.ORGANIZATION -> Color(0xFF00A86B)
+    AppMode.DRIVING -> Color(0xFF2477F2)
+    AppMode.STUDY -> Color(0xFFFF9F0A)
+    AppMode.ORGANIZATION -> Color(0xFF1EB980)
 }
 
 private fun appModeGuideText(mode: AppMode): String = when (mode) {
-    AppMode.DRIVING -> "• 운전 중에 스마트폰을 잘 고정하여 주세요"
-    AppMode.STUDY -> "• 학습 중 화면을 벗어나지 않도록 자세를 유지해 주세요"
-    AppMode.ORGANIZATION -> "• 조직 모드는 팀 운영 가이드에 맞춰 사용해 주세요"
+    AppMode.DRIVING -> "운전 중에는 스마트폰을 단단히 고정해 주세요"
+    AppMode.STUDY -> "학습 중에는 화면을 벗어나지 않도록 자세를 유지해 주세요"
+    AppMode.ORGANIZATION -> "조직 모드는 팀 운영 가이드에 맞춰 사용해 주세요"
 }
 
-
-// 하단 모니터링 시작/종료 버튼의 모체? 그런 느낌
 @Composable
 private fun AnimatedButton(
     onClick: () -> Unit,
@@ -517,13 +541,14 @@ private fun AnimatedButton(
     backgroundColor: Color,
     disabledBackgroundColor: Color,
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -531,85 +556,36 @@ private fun AnimatedButton(
         label = "button_scale"
     )
 
-    val buttonBackground = if (enabled) {
-        Brush.linearGradient(
-            colors = listOf(
-                backgroundColor,
-                backgroundColor.copy(alpha = 0.9f)
-            )
-        )
-    } else {
-        Brush.linearGradient(
-            colors = listOf(
-                disabledBackgroundColor,
-                disabledBackgroundColor.copy(alpha = 0.9f)
-            )
-        )
-    }
-
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
-            .fillMaxWidth()
-            .height(64.dp)
+            .height(58.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent
+            containerColor = backgroundColor,
+            contentColor = Color.White,
+            disabledContainerColor = disabledBackgroundColor,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp),
-        interactionSource = interactionSource
+        shape = RoundedCornerShape(18.dp),
+        interactionSource = interactionSource,
+        contentPadding = ButtonDefaults.ContentPadding
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = buttonBackground,
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color.White,
-                letterSpacing = (-0.45).sp
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
         }
-    }
-}
-
-@Composable
-private fun StatusIndicator(
-    text: String,
-    isActive: Boolean,
-    isMonitoring: Boolean = false
-) {
-    val activeColor = if (isMonitoring) Color(0xFFE53935) else Color(0xFF2196F3)
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(vertical = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(
-                    if (isActive) activeColor else Color(0xFF757575)
-                )
-        )
         Text(
             text = text,
-            fontSize = 14.sp,
-            color = if (isActive) activeColor else Color(0xFF757575),
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.labelLarge
         )
     }
 }

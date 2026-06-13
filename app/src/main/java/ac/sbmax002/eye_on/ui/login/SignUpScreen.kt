@@ -1,31 +1,55 @@
 package ac.sbmax002.eye_on.ui.login
 
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.network.SignupRequest
 import ac.sbmax002.eye_on.repository.AppStateRepository
 import ac.sbmax002.eye_on.repository.AuthRepository
+import java.util.Calendar
 import kotlinx.coroutines.launch
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,99 +64,101 @@ fun SignUpScreen(
     var name by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    
-    // 나이(년도) 드롭다운 상태
+
     var expandedYear by remember { mutableStateOf(false) }
     var selectedYear by remember { mutableStateOf("") }
-    val years = (1950..2024).map { it.toString() }.reversed()
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val years = remember(currentYear) { (1950..currentYear).map { it.toString() }.reversed() }
 
-    // 성별 상태
     val genderOptions = listOf("남", "여")
     var selectedGender by remember { mutableStateOf(genderOptions[0]) }
 
-    val scrollState = rememberScrollState()
-
-    // 어두운 배경색 적용
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF1A1A1A)
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .verticalScroll(scrollState),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
-            
             Text(
                 text = "회원가입",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
+            Text(
+                text = "Eye:on을 바로 시작할 수 있게 필요한 정보만 받을게요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             CustomTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = "이메일",
                 keyboardType = KeyboardType.Email
             )
-            
+
             CustomTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = "비밀번호",
-                isPassword = true
+                isPassword = true,
+                keyboardType = KeyboardType.Password
             )
-            
+
             CustomTextField(
                 value = name,
                 onValueChange = { name = it },
                 label = "이름"
             )
-            
+
             CustomTextField(
                 value = nickname,
                 onValueChange = { nickname = it },
                 label = "닉네임"
             )
-            
-            // 년도 드롭다운
+
             ExposedDropdownMenuBox(
                 expanded = expandedYear,
                 onExpandedChange = { expandedYear = !expandedYear },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 14.dp)
             ) {
                 OutlinedTextField(
                     value = selectedYear,
                     onValueChange = { },
                     readOnly = true,
-                    label = { Text("출생 년도", color = Color(0xFF9E9E9E)) },
+                    label = { Text("출생 년도") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF007AFF),
-                        unfocusedBorderColor = Color(0xFF424242),
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    ),
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = signUpTextFieldColors(),
                     singleLine = true
                 )
                 ExposedDropdownMenu(
                     expanded = expandedYear,
                     onDismissRequest = { expandedYear = false },
-                    modifier = Modifier.background(Color(0xFF2A2A2A))
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 ) {
                     years.forEach { year ->
                         DropdownMenuItem(
-                            text = { Text(text = year, color = Color.White) },
+                            text = {
+                                Text(
+                                    text = year,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             onClick = {
                                 selectedYear = year
                                 expandedYear = false
@@ -141,65 +167,29 @@ fun SignUpScreen(
                     }
                 }
             }
-            
-            // 성별 선택 (Radio Buttons)
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = "성별",
-                    fontSize = 14.sp,
-                    color = Color(0xFF9E9E9E),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().selectableGroup(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    genderOptions.forEach { text ->
-                        Row(
-                            Modifier
-                                .height(56.dp)
-                                .selectable(
-                                    selected = (text == selectedGender),
-                                    onClick = { selectedGender = text },
-                                    role = Role.RadioButton
-                                )
-                                .padding(horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (text == selectedGender),
-                                onClick = null,
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Color(0xFF007AFF),
-                                    unselectedColor = Color(0xFF757575)
-                                )
-                            )
-                            Text(
-                                text = text,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 8.dp),
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-            }
-            
+
+            GenderSelector(
+                options = genderOptions,
+                selectedGender = selectedGender,
+                onGenderSelected = { selectedGender = it },
+                modifier = Modifier.padding(bottom = 28.dp)
+            )
+
             AnimatedButtonLogin(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank() && name.isNotBlank()) {
                         scope.launch {
                             try {
-                                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-                                val ageValue = if (selectedYear.isNotEmpty()) currentYear - selectedYear.toInt() + 1 else 20
+                                val ageValue = if (selectedYear.isNotEmpty()) {
+                                    currentYear - selectedYear.toInt() + 1
+                                } else {
+                                    20
+                                }
                                 val response = NetworkConfig.authApiService.signUp(
                                     SignupRequest(
                                         email = email,
                                         password = password,
-                                        organizationCode = "", // 서버 규격 호환
+                                        organizationCode = "",
                                         name = name,
                                         nickname = nickname,
                                         age = ageValue,
@@ -218,12 +208,11 @@ fun SignUpScreen(
                                             uid = authBody.userId.toString()
                                         )
 
-                                        onNavigateToHome()
                                         Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
                                         onNavigateToHome()
                                     }
                                 } else {
-                                    val msg = when(response.code()) {
+                                    val msg = when (response.code()) {
                                         409 -> "이미 사용 중인 이메일입니다."
                                         400 -> "입력 양식을 확인해주세요."
                                         else -> "회원가입 실패: ${response.code()}"
@@ -237,20 +226,67 @@ fun SignUpScreen(
                     }
                 },
                 text = "가입 완료",
-                backgroundColor = Color(0xFF007AFF)
+                backgroundColor = MaterialTheme.colorScheme.primary
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             TextButton(onClick = onNavigateBack) {
                 Text(
                     text = "이미 계정이 있으신가요? 로그인",
-                    color = Color(0xFF007AFF),
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
-            
-            Spacer(modifier = Modifier.height(48.dp))
+        }
+    }
+}
+
+@Composable
+private fun GenderSelector(
+    options: List<String>,
+    selectedGender: String,
+    onGenderSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "성별",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            options.forEach { option ->
+                val selected = option == selectedGender
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { onGenderSelected(option) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = option,
+                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
         }
     }
 }
@@ -267,21 +303,28 @@ fun CustomTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, color = Color(0xFF9E9E9E)) },
+        label = { Text(label) },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedBorderColor = Color(0xFF007AFF),
-            unfocusedBorderColor = Color(0xFF424242),
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent
-        ),
+            .padding(bottom = 14.dp),
+        shape = RoundedCornerShape(18.dp),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        colors = signUpTextFieldColors(),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         singleLine = true
     )
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun signUpTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+)

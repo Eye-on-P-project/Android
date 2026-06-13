@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -111,7 +110,7 @@ private fun OverlayPermissionDialog(
                 .fillMaxWidth()
                 .padding(10.dp),
             shape = RoundedCornerShape(24.dp),
-            color = Color(0xFF2A2A2A),
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp
         ) {
             Column(
@@ -126,9 +125,9 @@ private fun OverlayPermissionDialog(
                     text = "플로팅 모드 권한 필요",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.45).sp
+                    letterSpacing = 0.sp
                 )
                 
                 // 안내 메시지
@@ -136,10 +135,10 @@ private fun OverlayPermissionDialog(
                     text = "플로팅 모드를 사용하려면\n다른 앱 위에 표시 권한 동의가 필요합니다.\n\n동의해야 플로팅 모드를 사용할 수 있습니다.",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF99A1AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     lineHeight = 20.sp,
-                    letterSpacing = (-0.15).sp
+                    letterSpacing = 0.sp
                 )
                 
                 // 버튼들
@@ -152,17 +151,17 @@ private fun OverlayPermissionDialog(
                         onClick = onDismiss,
                         modifier = Modifier
                             .weight(1f)
-                            .height(64.dp),
+                            .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF424242)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = "취소",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium
                         )
                     }
                     
@@ -171,18 +170,18 @@ private fun OverlayPermissionDialog(
                         onClick = onConfirm,
                         modifier = Modifier
                             .weight(1f)
-                            .height(64.dp),
+                            .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF007AFF)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = "설정으로 이동",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            color = Color.White
+                            textAlign = TextAlign.Center
                         )
                     }
                 }

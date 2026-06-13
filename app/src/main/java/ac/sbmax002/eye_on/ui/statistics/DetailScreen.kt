@@ -42,30 +42,30 @@ fun DetailScreen(
         topBar = {
             SessionDetailTopBar(onNavigateBack)
         },
-        containerColor = Color(0xFF0A0A0A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         if (session == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Session not found", color = Color.White)
+                Text("Session not found", color = MaterialTheme.colorScheme.onBackground)
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 // 1. Header (날짜, 시간)
                 Text(
                     text = session.dateStr,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${session.time}부터 • ${session.durationStr} 동안",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 20.sp
                 )
 
@@ -83,7 +83,7 @@ fun DetailScreen(
                 // 2. Timeline Title
                 Text(
                     text = "Alert Timeline",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -113,7 +113,7 @@ fun SessionDetailTopBar(onBackClick: () -> Unit) {
         title = {
             Text(
                 text = "Details",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp
             )
@@ -123,11 +123,11 @@ fun SessionDetailTopBar(onBackClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A0A0A))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
     )
 }
 
@@ -150,7 +150,7 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
                         .width(2.dp)
                         .fillMaxHeight()
                         .padding(top = 16.dp)
-                        .background(Color(0xFF414141))
+                        .background(MaterialTheme.colorScheme.outlineVariant)
                 )
             }
 
@@ -171,8 +171,9 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF414141)),
-            shape = RoundedCornerShape(12.dp)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(18.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -212,14 +213,14 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
                         )
                         Text(
                             text = event.duration,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = event.message,
-                        color = Color(0xFFE0E0E0),
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp
                     )
                 }
@@ -231,12 +232,12 @@ fun TimelineItem(event: SessionEvent, isLast: Boolean) {
 @Composable
 private fun BatteryUsageSection(start: Int, end: Int, usage: Int) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("배터리 사용량", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("배터리 사용량", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 InfoBadge(label = "시작", value = percentOrDash(start))
                 InfoBadge(label = "종료", value = percentOrDash(end))
@@ -251,13 +252,13 @@ private fun InfoBadge(label: String, value: String) {
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2A2A2A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(label, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 

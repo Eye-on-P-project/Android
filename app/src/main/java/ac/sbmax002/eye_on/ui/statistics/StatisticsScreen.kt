@@ -63,7 +63,7 @@ fun StatisticsScreen(
                 onBackClick = onNavigateBack
             )
         },
-        containerColor = Color(0xFF0A0A0A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -151,25 +151,25 @@ fun CurrentSessionView(
         ) {
             // 시간 카드
             DashboardCard(title = mainLabel, icon = Icons.Outlined.AccessTime, iconTint = themeColor) {
-                Text("시작 시간", color = Color.Gray, fontSize = 14.sp)
+                Text("시작 시간", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 // [수정] 여기에 실제 포맷팅된 시작 시간을 표시
-                Text(startTimeStr, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                Text(startTimeStr, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Medium)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(subLabel, color = Color.Gray, fontSize = 14.sp)
-                Text(durationString, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text(subLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                Text(durationString, color = MaterialTheme.colorScheme.onSurface, fontSize = 32.sp, fontWeight = FontWeight.Bold)
             }
 
             // 감지 기록 카드
             DashboardCard(title = "감지 기록", icon = Icons.Outlined.Visibility, iconTint = themeColor) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(level1CountLabel(appMode), color = Color.Gray)
+                    Text(level1CountLabel(appMode), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${homeUiState.drowsinessDetectionCount}회", color = Color(0xFFFFC107), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(level2CountLabel(appMode), color = Color.Gray)
+                    Text(level2CountLabel(appMode), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${homeUiState.sleepDetectionCount}회", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -177,7 +177,7 @@ fun CurrentSessionView(
             // 이벤트 타임라인
             DashboardCard(title = "이벤트 타임라인", icon = Icons.Default.Warning, iconTint = themeColor) {
                 if (events.isEmpty()) {
-                    Text("실시간 이벤트 대기 중...", color = Color.Gray, fontSize = 14.sp)
+                    Text("실시간 이벤트 대기 중...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 } else {
                     // DetailScreen.kt에 있는 TimelineItem 재사용
                     // Column으로 감싸서 리스트 표시
@@ -197,7 +197,7 @@ fun CurrentSessionView(
         Button(
             onClick = onStopClick,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(18.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text(stopButtonLabel(appMode), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -239,9 +239,9 @@ fun HistoryListView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF1A1A1A)),
+                .height(52.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEach { tab ->
@@ -251,14 +251,14 @@ fun HistoryListView(
                         .weight(1f)
                         .fillMaxHeight()
                         .padding(4.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(if (isSelected) themeColor else Color.Transparent)
                         .clickable { viewModel.updateFilter(tab) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = tab,
-                        color = if (isSelected) Color.White else Color.Gray,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -275,7 +275,7 @@ fun HistoryListView(
 
             Text(
                 text = "${h}시간 ${m}분",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Normal
             )
@@ -286,7 +286,7 @@ fun HistoryListView(
                 "월간" -> "최근 30일"
                 else -> "전체 기간"
             }
-            Text(text = periodText, color = Color.Gray, fontSize = 14.sp)
+            Text(text = periodText, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -295,12 +295,12 @@ fun HistoryListView(
         DashboardCard(title = "총 세션 수", icon = Icons.Default.CalendarToday, iconTint = themeColor) {
             Text(
                 text = "${uiState.totalSessions}",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Normal
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = sessionLabel, color = Color.Gray, fontSize = 14.sp)
+            Text(text = sessionLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -320,7 +320,7 @@ fun HistoryListView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(level1CountLabel(uiState.appMode), color = Color.Gray, fontSize = 14.sp)
+                Text(level1CountLabel(uiState.appMode), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 Text("${uiState.level1Total}회", color = Color(0xFFFFC107), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -328,7 +328,7 @@ fun HistoryListView(
                 progress = { safeLvl1Ratio },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                 color = Color(0xFFFFC107),
-                trackColor = Color(0xFF333333),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round,
             )
 
@@ -340,7 +340,7 @@ fun HistoryListView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(level2CountLabel(uiState.appMode), color = Color.Gray, fontSize = 14.sp)
+                Text(level2CountLabel(uiState.appMode), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 Text("${uiState.level2Total}회", color = Color(0xFFE53935), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -348,7 +348,7 @@ fun HistoryListView(
                 progress = { safeLvl2Ratio },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                 color = Color(0xFFE53935),
-                trackColor = Color(0xFF333333),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round,
             )
         }
@@ -376,7 +376,7 @@ fun HistoryListView(
         if (sessions.isEmpty()) {
             Text(
                 text = "표시할 세션이 없습니다.",
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(vertical = 12.dp)
             )
@@ -488,9 +488,10 @@ fun DashboardCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             if (icon != null) {
@@ -498,14 +499,14 @@ fun DashboardCard(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = iconTint ?: Color.White,
+                        tint = iconTint ?: MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             } else {
-                Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(modifier = Modifier.height(16.dp))
             content()
@@ -524,8 +525,9 @@ fun SessionListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF414141)),
-        shape = RoundedCornerShape(12.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -534,9 +536,9 @@ fun SessionListItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(session.dateStr, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(session.dateStr, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text("${session.time}부터 • ${session.durationStr} 동안", color = Color.Gray, fontSize = 14.sp)
+                    Text("${session.time}부터 • ${session.durationStr} 동안", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
                 Text(
                     text = sessionModeLabel(appMode),
@@ -564,7 +566,7 @@ fun SessionListItem(
 
                 Text(
                     text = "자세히 보기",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -577,8 +579,8 @@ fun SessionListItem(
 fun AlertBadge(text: String, value: Int, color: Color) {
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF1F1F1F))
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -589,7 +591,7 @@ fun AlertBadge(text: String, value: Int, color: Color) {
                 .clip(CircleShape)
                 .background(color)
         )
-        Text("$text ${value}회", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text("$text ${value}회", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -597,7 +599,7 @@ fun AlertBadge(text: String, value: Int, color: Color) {
 fun SectionTitle(text: String) {
     Text(
         text = text,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.onBackground,
         fontSize = 16.sp,
         fontWeight = FontWeight.SemiBold
     )
@@ -611,15 +613,15 @@ fun TimeFrequencyRow(label: String, count: Int, max: Int, color: Color) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, color = Color.Gray, fontSize = 13.sp)
-            Text("${count}회", color = Color.White, fontSize = 13.sp)
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            Text("${count}회", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
         }
         Spacer(modifier = Modifier.height(6.dp))
         LinearProgressIndicator(
             progress = { count.toFloat() / max.toFloat() },
             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
             color = color,
-            trackColor = Color(0xFF333333),
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
             strokeCap = StrokeCap.Round,
         )
     }
@@ -630,17 +632,17 @@ fun TimeFrequencyRow(label: String, count: Int, max: Int, color: Color) {
 fun StatisticsTopBar(title: String, onBackClick: () -> Unit) {
     TopAppBar(
         title = {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(title, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A0A0A))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
     )
 }

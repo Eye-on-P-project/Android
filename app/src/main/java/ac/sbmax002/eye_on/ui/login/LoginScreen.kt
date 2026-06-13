@@ -1,29 +1,56 @@
 package ac.sbmax002.eye_on.ui.login
 
-import androidx.compose.animation.core.*
+import android.widget.Toast
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ac.sbmax002.eye_on.network.NetworkConfig
+import ac.sbmax002.eye_on.R
 import ac.sbmax002.eye_on.network.LoginRequest
+import ac.sbmax002.eye_on.network.NetworkConfig
 import ac.sbmax002.eye_on.repository.AppStateRepository
 import ac.sbmax002.eye_on.repository.AuthRepository
 import kotlinx.coroutines.launch
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,10 +64,9 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-// 어두운 배경색 적용 (기존 앱 테마 유지)
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF1A1A1A)
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
@@ -49,55 +75,61 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "Eye:on",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
             Text(
                 text = "Eye:on",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = (-1).sp
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                text = "오늘도 깨어 있는 순간을 지켜드릴게요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
 
-            OutlinedTextField(
+            Spacer(modifier = Modifier.height(42.dp))
+
+            LoginTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("이메일", color = Color(0xFF9E9E9E)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF007AFF),
-                    unfocusedBorderColor = Color(0xFF424242),
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true
+                label = "이메일",
+                keyboardType = KeyboardType.Email
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
+            LoginTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("비밀번호", color = Color(0xFF9E9E9E)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF007AFF),
-                    unfocusedBorderColor = Color(0xFF424242),
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true
+                label = "비밀번호",
+                isPassword = true,
+                keyboardType = KeyboardType.Password
             )
-            Spacer(modifier = Modifier.height(32.dp))
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             AnimatedButtonLogin(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank()) {
@@ -107,20 +139,19 @@ fun LoginScreen(
                                 if (response.isSuccessful) {
                                     val authBody = response.body()
                                     if (authBody != null) {
-                                        // 메모리 및 영구 저장소에 토큰 저장
                                         AppStateRepository.accessToken = authBody.accessToken
                                         AppStateRepository.userId = authBody.userId
-                                        
+
                                         authRepository.saveAuthTokens(
                                             access = authBody.accessToken,
                                             refresh = authBody.refreshToken,
                                             uid = authBody.userId.toString()
                                         )
-                                        
+
                                         onNavigateToHome()
                                     }
                                 } else {
-                                    val msg = when(response.code()) {
+                                    val msg = when (response.code()) {
                                         401 -> "이메일 또는 비밀번호가 틀렸습니다."
                                         400 -> "입력값이 올바르지 않습니다."
                                         else -> "로그인 실패: ${response.code()}"
@@ -134,20 +165,53 @@ fun LoginScreen(
                     }
                 },
                 text = "로그인",
-                backgroundColor = Color(0xFF007AFF)
+                backgroundColor = MaterialTheme.colorScheme.primary
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             TextButton(onClick = onNavigateToSignUp) {
                 Text(
                     text = "계정이 없으신가요? 회원가입",
-                    color = Color(0xFF007AFF),
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LoginTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isPassword: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        singleLine = true
+    )
 }
 
 @Composable
@@ -155,13 +219,14 @@ fun AnimatedButtonLogin(
     onClick: () -> Unit,
     text: String,
     backgroundColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -171,24 +236,26 @@ fun AnimatedButtonLogin(
 
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(58.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
         colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            contentColor = Color.White,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         interactionSource = interactionSource
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            style = MaterialTheme.typography.labelLarge
         )
     }
 }
