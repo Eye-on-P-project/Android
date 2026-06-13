@@ -47,7 +47,7 @@ fun SettingsScreen(
         topBar = {
             SettingsTopBar(onBackClick = onNavigateBack)
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -71,15 +71,15 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "회원 정보",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.31).sp
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp
                     )
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = Color(0xFF99A1AF),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -99,10 +99,10 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "구독 관리",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.31).sp
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp
                     )
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -112,16 +112,16 @@ fun SettingsScreen(
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = if (currentTier == SubscriptionTier.PLUS)
-                                Color(0xFF007AFF).copy(alpha = 0.2f)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             else
-                                Color(0xFF99A1AF).copy(alpha = 0.2f)
+                                MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Text(
                                 text = currentTier.displayName,
                                 color = if (currentTier == SubscriptionTier.PLUS)
-                                    Color(0xFF007AFF)
+                                    MaterialTheme.colorScheme.primary
                                 else
-                                    Color(0xFF99A1AF),
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -130,7 +130,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = Color(0xFF99A1AF),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -219,10 +219,10 @@ private fun SettingsTopBar(onBackClick: () -> Unit) {
         title = {
             Text(
                 text = "설정",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = 0.07.sp
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.sp
             )
         },
         navigationIcon = {
@@ -230,12 +230,12 @@ private fun SettingsTopBar(onBackClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "뒤로가기",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = MaterialTheme.colorScheme.background
         )
     )
 }
@@ -254,20 +254,21 @@ private fun SettingsSection(
         // 섹션 제목
         Text(
             text = title,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            letterSpacing = (-0.44).sp
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.sp
         )
         
         // 섹션 컨텐츠 컨테이너
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF2A2A2A)
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(18.dp),
                 content = content
             )
         }
@@ -292,10 +293,10 @@ private fun AlarmSoundSelector(
     ) {
         Text(
             text = label,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            letterSpacing = (-0.31).sp
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.sp
         )
         
         Row(
@@ -304,15 +305,15 @@ private fun AlarmSoundSelector(
         ) {
             Text(
                 text = currentSound.displayName,
-                color = Color(0xFF99A1AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
-                letterSpacing = (-0.31).sp
+                letterSpacing = 0.sp
             )
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color(0xFF99A1AF),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -339,17 +340,17 @@ private fun VolumeSlider(
         ) {
             Text(
                 text = label,
-                color = Color(0xFF99A1AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                letterSpacing = (-0.15).sp
+                letterSpacing = 0.sp
             )
             Text(
                 text = "$volume%",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = (-0.15).sp
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.sp
             )
         }
         
@@ -362,7 +363,7 @@ private fun VolumeSlider(
             colors = SliderDefaults.colors(
                 thumbColor = if (volume <= 70) Color(0xFFFF9F0A) else Color(0xFFFF3B30),
                 activeTrackColor = if (volume <= 70) Color(0xFFFF9F0A) else Color(0xFFFF3B30),
-                inactiveTrackColor = Color(0xFF1A1A1A)
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
     }
@@ -386,16 +387,16 @@ private fun FloatingIconSizeSelector(
                 onClick = { onSizeSelected(size) },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSelected) Color(0xFF007AFF) else Color(0xFF1A1A1A),
-                    contentColor = if (isSelected) Color.White else Color(0xFF99A1AF)
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
                     text = size.displayName,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = (-0.31).sp
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp
                 )
             }
         }
@@ -418,10 +419,10 @@ private fun SettingToggleItem(
     ) {
         Text(
             text = label,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            letterSpacing = (-0.31).sp
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.sp
         )
         
         Switch(
@@ -429,9 +430,9 @@ private fun SettingToggleItem(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF007AFF),
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFF424242)
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline
             )
         )
     }
@@ -455,19 +456,18 @@ private fun SensitivitySelector(
                 onClick = { onSensitivitySelected(sensitivity) },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSelected) Color(0xFF007AFF) else Color(0xFF1A1A1A),
-                    contentColor = if (isSelected) Color.White else Color(0xFF99A1AF)
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
                     text = sensitivity.displayName,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = (-0.31).sp
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp
                 )
             }
         }
     }
 }
-

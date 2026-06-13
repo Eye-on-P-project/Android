@@ -48,7 +48,7 @@ fun SubscriptionStatusScreen(
                 title = {
                     Text(
                         text = "구독 관리",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -58,16 +58,16 @@ fun SubscriptionStatusScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "뒤로가기",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -114,7 +114,8 @@ fun SubscriptionStatusScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF007AFF)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text("요금제 변경", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -127,10 +128,10 @@ fun SubscriptionStatusScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFFF3B30)
+                            contentColor = MaterialTheme.colorScheme.error
                         ),
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                            brush = Brush.linearGradient(listOf(Color(0xFFFF3B30), Color(0xFFFF3B30)))
+                            brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.error))
                         )
                     ) {
                         Text("구독 해지", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -149,7 +150,7 @@ fun SubscriptionStatusScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFF3A2A00)
+                        color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Column(
                             modifier = Modifier.padding(20.dp),
@@ -157,14 +158,14 @@ fun SubscriptionStatusScreen(
                         ) {
                             Text(
                                 text = "⚠️ 해지 예정",
-                                color = Color(0xFFFF9F0A),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "현재 결제 기간이 끝나면 Free 플랜으로 전환됩니다.\n" +
                                         "LLM 음성 대화 기능을 계속 이용하려면 구독을 복원하세요.",
-                                color = Color(0xFFCCCCCC),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp
                             )
@@ -178,14 +179,15 @@ fun SubscriptionStatusScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF007AFF)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         enabled = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -219,8 +221,10 @@ private fun CurrentPlanCard(
 ) {
     val gradientColors = when (tier) {
         SubscriptionTier.PLUS -> listOf(Color(0xFF667EEA), Color(0xFF764BA2))
-        SubscriptionTier.FREE -> listOf(Color(0xFF2A2A2A), Color(0xFF3A3A3A))
+        SubscriptionTier.FREE -> listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)
     }
+    val cardTextColor = if (tier == SubscriptionTier.PLUS) Color.White else MaterialTheme.colorScheme.onSurface
+    val cardMutedTextColor = cardTextColor.copy(alpha = 0.72f)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +248,7 @@ private fun CurrentPlanCard(
                 ) {
                     Text(
                         text = "현재 플랜",
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = cardMutedTextColor,
                         fontSize = 14.sp
                     )
 
@@ -256,7 +260,7 @@ private fun CurrentPlanCard(
                         else -> "만료"
                     }
                     val badgeColor = when {
-                        tier == SubscriptionTier.FREE -> Color(0xFF99A1AF)
+                        tier == SubscriptionTier.FREE -> MaterialTheme.colorScheme.onSurfaceVariant
                         !isAutoRenew -> Color(0xFFFF9F0A)
                         isActive -> Color(0xFF30D158)
                         else -> Color(0xFFFF3B30)
@@ -290,7 +294,7 @@ private fun CurrentPlanCard(
                     }
                     Text(
                         text = tier.displayName,
-                        color = Color.White,
+                        color = cardTextColor,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -299,7 +303,7 @@ private fun CurrentPlanCard(
                 if (tier == SubscriptionTier.PLUS) {
                     Text(
                         text = "₩4,900 / 월",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = cardMutedTextColor,
                         fontSize = 16.sp
                     )
                 }
@@ -316,7 +320,8 @@ private fun PlusUpgradeCard(onUpgradeClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF2A2A2A)
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -324,14 +329,14 @@ private fun PlusUpgradeCard(onUpgradeClick: () -> Unit) {
         ) {
             Text(
                 text = "✨ Plus로 업그레이드",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
                 text = "LLM 음성 대화 기능으로 졸음 감지 시\n자동으로 대화를 시작하여 졸음을 예방하세요.",
-                color = Color(0xFF99A1AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 lineHeight = 20.sp
             )
@@ -354,7 +359,7 @@ private fun PlusUpgradeCard(onUpgradeClick: () -> Unit) {
                     )
                     Text(
                         text = benefit,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp
                     )
                 }
@@ -369,7 +374,8 @@ private fun PlusUpgradeCard(onUpgradeClick: () -> Unit) {
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF007AFF)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
@@ -395,7 +401,8 @@ private fun SubscriptionDetailCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF2A2A2A)
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -403,7 +410,7 @@ private fun SubscriptionDetailCard(
         ) {
             Text(
                 text = "구독 정보",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -427,12 +434,12 @@ private fun SubscriptionDetailCard(
                     ) {
                         Text(
                             text = "남은 기간",
-                            color = Color(0xFF99A1AF),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
                         )
                         Text(
                             text = "${days}일",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -446,9 +453,9 @@ private fun SubscriptionDetailCard(
                         color = when {
                             days <= 3 -> Color(0xFFFF3B30)
                             days <= 7 -> Color(0xFFFF9F0A)
-                            else -> Color(0xFF007AFF)
+                            else -> MaterialTheme.colorScheme.primary
                         },
-                        trackColor = Color(0xFF1A1A1A)
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }
@@ -463,7 +470,7 @@ private fun SubscriptionDetailCard(
 private fun DetailRow(
     label: String,
     value: String,
-    valueColor: Color = Color.White
+    valueColor: Color? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -472,12 +479,12 @@ private fun DetailRow(
     ) {
         Text(
             text = label,
-            color = Color(0xFF99A1AF),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 14.sp
         )
         Text(
             text = value,
-            color = valueColor,
+            color = valueColor ?: MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -492,11 +499,11 @@ private fun ExpiryWarningBanner(daysRemaining: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF3A1A1A)
+        color = MaterialTheme.colorScheme.errorContainer
     ) {
         Text(
             text = "⚠️ 구독이 ${daysRemaining}일 후 만료됩니다",
-            color = Color(0xFFFF3B30),
+            color = MaterialTheme.colorScheme.onErrorContainer,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(16.dp),
@@ -520,7 +527,7 @@ private fun CancelConfirmDialog(
         title = {
             Text(
                 text = "구독 해지",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -531,12 +538,12 @@ private fun CancelConfirmDialog(
             ) {
                 Text(
                     text = "정말로 구독을 해지하시겠습니까?",
-                    color = Color(0xFFCCCCCC),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
                 Text(
                     text = "해지 시 잃게 되는 혜택:",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -550,11 +557,11 @@ private fun CancelConfirmDialog(
                 expiryDate?.let {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF1A1A1A)
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Text(
                             text = "📅 ${formatDate(it)}까지 서비스 이용 가능",
-                            color = Color(0xFF99A1AF),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(12.dp)
                         )
@@ -583,10 +590,10 @@ private fun CancelConfirmDialog(
                 onClick = onDismiss,
                 enabled = !isLoading
             ) {
-                Text("유지하기", color = Color(0xFF007AFF), fontWeight = FontWeight.Bold)
+                Text("유지하기", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = Color(0xFF2A2A2A),
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp)
     )
 }

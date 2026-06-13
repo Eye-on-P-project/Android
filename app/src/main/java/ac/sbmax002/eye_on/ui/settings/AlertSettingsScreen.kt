@@ -124,7 +124,7 @@ private fun AlertSoundScreen(
                 onBackClick = onNavigateBack
             )
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -180,16 +180,16 @@ private fun AlertSoundScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF007AFF)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(18.dp)
             ) {
                 Text(
                     text = "저장",
-                    color = Color.White,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = (-0.44).sp
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.sp
                 )
             }
         }
@@ -209,10 +209,10 @@ private fun AlertTopBar(
         title = {
             Text(
                 text = title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = 0.07.sp
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.sp
             )
         },
         navigationIcon = {
@@ -220,12 +220,12 @@ private fun AlertTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "뒤로가기",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = MaterialTheme.colorScheme.background
         )
     )
 }
@@ -274,8 +274,9 @@ private fun AlarmSoundItem(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF2A2A2A)
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isSelected) 2.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -293,7 +294,7 @@ private fun AlarmSoundItem(
                     Icons.Default.RadioButtonUnchecked
                 },
                 contentDescription = if (isSelected) "선택됨" else "선택 안 됨",
-                tint = if (isSelected) primaryColor else Color(0xFF6A7282),
+                tint = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
             
@@ -302,10 +303,10 @@ private fun AlarmSoundItem(
             // 중앙: 알림음 이름
             Text(
                 text = sound.displayName,
-                color = if (isSelected) primaryColor else Color.White,
+                color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = (-0.31).sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.sp,
                 modifier = Modifier.weight(1f)
             )
             
@@ -319,7 +320,7 @@ private fun AlarmSoundItem(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "미리듣기",
-                    tint = if (isPlaying) primaryColor else Color(0xFF99A1AF),
+                    tint = if (isPlaying) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }

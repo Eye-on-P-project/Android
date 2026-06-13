@@ -44,7 +44,7 @@ fun SubscriptionPlanScreen(
                 title = {
                     Text(
                         text = "요금제",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -54,16 +54,16 @@ fun SubscriptionPlanScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "뒤로가기",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -76,7 +76,7 @@ fun SubscriptionPlanScreen(
             // 헤더
             Text(
                 text = "나에게 맞는 플랜을 선택하세요",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
@@ -85,7 +85,7 @@ fun SubscriptionPlanScreen(
 
             Text(
                 text = "언제든 변경하거나 해지할 수 있습니다",
-                color = Color(0xFF99A1AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
@@ -111,7 +111,8 @@ fun SubscriptionPlanScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF2A2A2A)
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -119,7 +120,7 @@ fun SubscriptionPlanScreen(
                 ) {
                     Text(
                         text = "💡 안내사항",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -127,7 +128,7 @@ fun SubscriptionPlanScreen(
                         text = "• 구독은 월 단위로 자동 갱신됩니다\n" +
                                 "• 해지 시 결제 기간 종료까지 서비스 이용 가능\n" +
                                 "• 요금제 변경은 즉시 적용됩니다",
-                        color = Color(0xFF99A1AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 20.sp
                     )
@@ -145,7 +146,7 @@ fun SubscriptionPlanScreen(
             title = {
                 Text(
                     text = "🎉 구독 완료!",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -153,7 +154,7 @@ fun SubscriptionPlanScreen(
             text = {
                 Text(
                     text = "Plus 플랜이 활성화되었습니다.\nLLM 음성 대화 기능을 이용할 수 있습니다.",
-                    color = Color(0xFFCCCCCC),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )
@@ -163,10 +164,10 @@ fun SubscriptionPlanScreen(
                     viewModel.dismissSuccessDialog()
                     onNavigateBack()
                 }) {
-                    Text("확인", color = Color(0xFF007AFF), fontWeight = FontWeight.Bold)
+                    Text("확인", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF2A2A2A),
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -178,7 +179,7 @@ fun SubscriptionPlanScreen(
             title = {
                 Text(
                     text = "오류",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -186,16 +187,16 @@ fun SubscriptionPlanScreen(
             text = {
                 Text(
                     text = error,
-                    color = Color(0xFFCCCCCC),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearError() }) {
-                    Text("확인", color = Color(0xFF007AFF))
+                    Text("확인", color = MaterialTheme.colorScheme.primary)
                 }
             },
-            containerColor = Color(0xFF2A2A2A),
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -214,14 +215,15 @@ private fun PlanCard(
     val isPlus = plan.tier == SubscriptionTier.PLUS
     val borderColor = when {
         isCurrentPlan -> Color(0xFF30D158)
-        isPlus -> Color(0xFF007AFF)
+        isPlus -> MaterialTheme.colorScheme.primary
         else -> Color.Transparent
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF2A2A2A),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isCurrentPlan || isPlus) 2.dp else 1.dp,
         border = BorderStroke(
             width = if (isCurrentPlan || isPlus) 2.dp else 0.dp,
             color = borderColor
@@ -251,7 +253,7 @@ private fun PlanCard(
                     }
                     Text(
                         text = plan.tier.displayName,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -280,14 +282,14 @@ private fun PlanCard(
             ) {
                 Text(
                     text = if (plan.monthlyPrice == 0) "무료" else "₩${"%,d".format(plan.monthlyPrice)}",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 if (plan.monthlyPrice > 0) {
                     Text(
                         text = "/ 월",
-                        color = Color(0xFF99A1AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
@@ -296,7 +298,7 @@ private fun PlanCard(
 
             // 구분선
             HorizontalDivider(
-                color = Color(0xFF3A3A3A),
+                color = MaterialTheme.colorScheme.outlineVariant,
                 thickness = 1.dp
             )
 
@@ -309,12 +311,12 @@ private fun PlanCard(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = if (isPlus) Color(0xFF007AFF) else Color(0xFF30D158),
+                        tint = if (isPlus) MaterialTheme.colorScheme.primary else Color(0xFF30D158),
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = feature,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp
                     )
                 }
@@ -330,7 +332,8 @@ private fun PlanCard(
                         .height(52.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF007AFF)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = !isLoading
                 ) {

@@ -7,12 +7,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -149,29 +149,15 @@ fun CameraPreviewContainer(
             .aspectRatio(0.75f)
             .clip(RoundedCornerShape(24.dp))
             .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF2A2A2A),
-                        Color(0xFF1F1F1F)
-                    )
-                )
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(24.dp)
             )
             .border(
-                width = 2.dp,
-                brush = if (isReady) {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF007AFF),
-                            Color(0xFF0051D5)
-                        )
-                    )
+                width = if (isReady) 1.5.dp else 1.dp,
+                color = if (isReady) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
                 } else {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF424242),
-                            Color(0xFF303030)
-                        )
-                    )
+                    MaterialTheme.colorScheme.outlineVariant
                 },
                 shape = RoundedCornerShape(24.dp)
             ),
@@ -211,7 +197,7 @@ fun CameraPreviewContainer(
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
-                                letterSpacing = (-0.44).sp
+                                letterSpacing = 0.sp
                             )
                         }
                     }
@@ -243,17 +229,17 @@ fun CameraPreviewContainer(
                     text = "모니터링 중",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.44).sp
+                    letterSpacing = 0.sp
                 )
                 Text(
                     text = "Service에서 카메라를 사용 중입니다",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF99A1AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.15).sp
+                    letterSpacing = 0.sp
                 )
             }
         } else {
@@ -268,10 +254,10 @@ fun CameraPreviewContainer(
                     modifier = Modifier
                         .size(192.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF007AFF).copy(alpha = 0.2f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                         .border(
-                            width = 4.dp,
-                            color = Color(0xFF007AFF),
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -286,18 +272,18 @@ fun CameraPreviewContainer(
                     text = "얼굴을 원 안에 맞춰주세요",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.44).sp
+                    letterSpacing = 0.sp
                 )
 
                 Text(
                     text = "카메라 권한이 필요합니다",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF99A1AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    letterSpacing = (-0.31).sp
+                    letterSpacing = 0.sp
                 )
             }
         }
@@ -323,12 +309,12 @@ private fun CircularGuideOverlay(
         // 기본 원형 가이드 (항상 표시)
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .border(
-                    width = 2.dp,
-                    color = Color(0xFF007AFF).copy(alpha = 0.5f),
-                    shape = CircleShape
-                )
+                    .fillMaxSize()
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                        shape = CircleShape
+                    )
         )
 
         // 얼굴 감지 인디케이터 (얼굴이 감지되면 표시)
@@ -351,11 +337,10 @@ private fun CircularGuideOverlay(
                     .fillMaxSize()
                     .border(
                         width = 4.dp,
-                        color = Color(0xFF007AFF),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
                     )
             )
         }
     }
 }
-

@@ -66,7 +66,7 @@ fun AccountScreen(
                 title = {
                     Text(
                         text = "계정 정보",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -76,17 +76,17 @@ fun AccountScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "뒤로가기",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -100,8 +100,9 @@ fun AccountScreen(
             // 정보 표시 리스트 디자인 (Read-Only)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF2A2A2A)
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp
             ) {
                 Column(
                     modifier = Modifier.padding(vertical = 8.dp)
@@ -123,7 +124,8 @@ fun AccountScreen(
                     .fillMaxWidth()
                     .clickable(onClick = onNavigateToSubscription),
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF2A2A2A)
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -147,12 +149,12 @@ fun AccountScreen(
                         Column {
                             Text(
                                 text = "구독 상태",
-                                color = Color(0xFF99A1AF),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = "${currentTier.displayName} 플랜",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -161,7 +163,7 @@ fun AccountScreen(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = Color(0xFF99A1AF),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -177,7 +179,8 @@ fun AccountScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF007AFF)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("회원 정보 수정", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -191,7 +194,7 @@ fun AccountScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Red.copy(alpha = 0.8f)
+                    containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
                 Text("로그아웃", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -207,7 +210,7 @@ fun AccountScreen(
             ) {
                 Text(
                     "회원 탈퇴",
-                    color = Color(0xFF99A1AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     textDecoration = TextDecoration.Underline
                 )
@@ -226,7 +229,7 @@ fun AccountScreen(
             title = {
                 Text(
                     "회원 탈퇴",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -238,7 +241,7 @@ fun AccountScreen(
                     Text(
                         "정말로 탈퇴하시겠습니까?\n\n" +
                                 "탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.",
-                        color = Color(0xFFCCCCCC),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
 
@@ -246,17 +249,19 @@ fun AccountScreen(
                     OutlinedTextField(
                         value = deletePassword,
                         onValueChange = { deletePassword = it },
-                        label = { Text("비밀번호 확인", color = Color(0xFF99A1AF)) },
+                        label = { Text("비밀번호 확인") },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         enabled = !isDeletingAccount,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color.Red,
-                            unfocusedBorderColor = Color(0xFF555555),
-                            cursorColor = Color.White
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.error,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = MaterialTheme.colorScheme.error,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            cursorColor = MaterialTheme.colorScheme.error
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -275,11 +280,11 @@ fun AccountScreen(
                     if (isDeletingAccount) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Color.Red,
+                            color = MaterialTheme.colorScheme.error,
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("탈퇴하기", color = Color.Red, fontWeight = FontWeight.Bold)
+                        Text("탈퇴하기", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -288,10 +293,10 @@ fun AccountScreen(
                     onClick = { showDeleteDialog = false },
                     enabled = !isDeletingAccount
                 ) {
-                    Text("취소", color = Color(0xFF99A1AF))
+                    Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = Color(0xFF2A2A2A),
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -313,20 +318,20 @@ private fun AccountInfoItem(
         ) {
             Text(
                 text = label,
-                color = Color(0xFF99A1AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal
             )
             Text(
                 text = value,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal
             )
         }
         if (showDivider) {
             HorizontalDivider(
-                color = Color(0xFF3A3A3A),
+                color = MaterialTheme.colorScheme.outlineVariant,
                 thickness = 1.dp,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
